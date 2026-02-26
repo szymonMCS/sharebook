@@ -1,53 +1,64 @@
+import logging
 from uuid import UUID
-from sqlalchemy.ext.asyncio import AsyncSession
-from database.models import User
-from database.repositories.user_repository import UserRepository
-from src.schemas.user import UserCreate, UserResponse
+from typing import Optional
+from src.services.interfaces import IUserService
+from database.repositories.interfaces import IUserRepository
+from src.schemas.user import UserUpdate, UserResponse, UserProfileResponse
+from src.core.exceptions import UserNotFoundException
+
+logger = logging.getLogger(__name__)
 
 
-class UserService:
-    def __init__(self, db: AsyncSession, repository: UserRepository | None = None):
-        self.db = db
-        self.repository = repository or UserRepository(db)
-    
-    def _hash_password(self, password: str) -> str:
-        from src.core.security import get_password_hash
-        return get_password_hash(password)
-    
-    def _verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        from src.core.security import verify_password
-        return verify_password(plain_password, hashed_password)
-    
-    async def register(self, user_data: UserCreate) -> User:
-        if await self.repository.email_exists(user_data.email):
-            raise ValueError(f"Użytkownik z emailem {user_data.email} już istnieje")
-        
-        hashed_password = self._hash_password(user_data.password)
-        
-        db_user = User(
-            email=user_data.email,
-            hashed_password=hashed_password,
-            first_name=user_data.first_name,
-            last_name=user_data.last_name,
-            location=user_data.location,
-            phone=user_data.phone,
+class UserService(IUserService):
+    def __init__(self, user_repo: IUserRepository):
+        self._user_repo = user_repo
+
+    async def get_by_id(self, user_id: UUID) -> UserResponse:
+        db_user = await self._user_repo.get(user_id)
+        if not db_user:
+            raise UserNotFoundException(user_id)
+        return UserResponse.model_validate(db_user)
+
+    async def get_by_email(self, email: str) -> Optional[UserResponse]:
+        db_user = await self._user_repo.get_by_email(email)
+        if not db_user:
+            return None
+        return UserResponse.model_validate(db_user)
+
+    async def exists_by_email(self, email: str) -> bool:
+        return await self._user_repo.email_exists(email)
+
+    async def update(self, user_id: UUID, user_update: UserUpdate) -> UserResponse:
+        db_user = await self._user_repo.get(user_id)
+        if not db_user:
+            raise UserNotFoundException(user_id)
+
+        updated_user = await self._user_repo.update(
+            db_obj=db_user,
+            obj_in=user_update.model_dump(exclude_unset=True)
         )
         
-        return await self.repository.create(db_user)
-    
-    async def get_by_id(self, user_id: UUID) -> User:
-        user = await self.repository.get_by_id(user_id)
-        if not user:
-            raise ValueError(f"Użytkownik o ID {user_id} nie istnieje")
-        return user
-    
-    async def get_by_email(self, email: str) -> User | None:
-        return await self.repository.get_by_email(email)
-    
-    async def authenticate(self, email: str, password: str) -> User | None:
-        user = await self.repository.get_by_email(email)
-        if not user:
-            return None
-        if not self._verify_password(password, user.hashed_password):
-            return None
-        return user
+        logger.info(f"User updated: {user_id}")
+        return UserResponse.model_validate(updated_user)
+
+    async def get_profile(self, user_id: UUID) -> UserProfileResponse:
+        db_user = await self._user_repo.get(user_id)
+        if not db_user:
+            raise UserNotFoundException(user_id)
+
+        # TODO: Get actual books count from repository
+        books_count = 0
+
+        return UserProfileResponse(
+            id=db_user.id,
+            email=db_user.email,
+            first_name=db_user.first_name,
+            last_name=db_user.last_name,
+            role=db_user.role,
+            is_active=db_user.is_active,
+            location=db_user.location,
+            phone=db_user.phone,
+            bio=db_user.bio,
+            created_at=db_user.created_at,
+            books_count=books_count
+        )

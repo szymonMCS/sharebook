@@ -1,43 +1,59 @@
-from typing import Generic, TypeVar, Type, Optional, List
+from abc import ABC
+from typing import TypeVar, Generic, List, Optional, Type
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import select, func
+from database.repositories.interfaces import IRepository, IUserRepository
 
-ModelType = TypeVar("ModelType", bound=DeclarativeBase)
+ModelType = TypeVar("ModelType")
 
-
-class BaseRepository(Generic[ModelType]):
+class BaseRepository(IRepository[ModelType]):
     
-    def __init__(self, db: AsyncSession, model: Type[ModelType]):
-        self.db = db
-        self.model = model
+    def __init__(self, model: Type[ModelType], db: AsyncSession):
+        super().__init__(db)
+        self._model = model
     
-    async def get_by_id(self, obj_id: UUID) -> Optional[ModelType]:
-        result = await self.db.execute(
-            select(self.model).where(self.model.id == obj_id)
+    async def get(self, id: UUID) -> Optional[ModelType]:
+        result = await self._db.execute(
+            select(self._model).where(self._model.id == id)
         )
         return result.scalar_one_or_none()
     
-    async def get_all(self, skip: int = 0, limit: int = 100) -> List[ModelType]:
-        result = await self.db.execute(
-            select(self.model).offset(skip).limit(limit)
+    async def get_multi(self, skip: int = 0, limit: int = 100) -> List[ModelType]:
+        result = await self._db.execute(
+            select(self._model)
+            .offset(skip)
+            .limit(limit)
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
     
-    async def create(self, obj: ModelType) -> ModelType:
-        self.db.add(obj)
-        await self.db.flush()
-        await self.db.refresh(obj)
-        return obj
+    async def create(self, obj_in: dict) -> ModelType:
+        db_obj = self._model(**obj_in)
+        self._db.add(db_obj)
+        await self._db.commit()
+        await self._db.refresh(db_obj)
+        return db_obj
     
-    async def delete(self, obj_id: UUID) -> bool:
-        result = await self.db.execute(
-            delete(self.model).where(self.model.id == obj_id)
+    async def update(self, db_obj: ModelType, obj_in: dict) -> ModelType:
+        for field, value in obj_in.items():
+            setattr(db_obj, field, value)
+        await self._db.commit()
+        await self._db.refresh(db_obj)
+        return db_obj
+    
+    async def delete(self, id: UUID) -> bool:
+        obj = await self.get(id)
+        if not obj:
+            return False
+        await self._db.delete(obj)
+        await self._db.commit()
+        return True
+    
+    async def exists(self, id: UUID) -> bool:
+        result = await self._db.execute(
+            select(func.count())
+            .where(self._model.id == id)
         )
-        return result.rowcount > 0
-    
-    async def count(self) -> int:
-        from sqlalchemy import func
-        result = await self.db.execute(select(func.count()).select_from(self.model))
-        return result.scalar()
+        return result.scalar() > 0
+
+__all__ = ["BaseRepository", "IUserRepository"]

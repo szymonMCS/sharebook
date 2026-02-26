@@ -33,32 +33,9 @@ class BookBase(BaseModel):
         return cleaned
 
 
-class BookCreate(BaseModel):
-
-    model_config = ConfigDict(populate_by_name=True)
+class BookCreate(BookBase):
     
-    title: Optional[str] = Field(None, min_length=1, max_length=500, description="Book title (optional if ISBN provided)", examples=["Władca Pierścieni"]) 
-    author: Optional[str] = Field(None, min_length=1, max_length=200, description="Book author", examples=["J.R.R. Tolkien"])
-    isbn: Optional[str] = Field(None, description="ISBN-10 or ISBN-13 format", examples=["9780261102385", "978-83-123-4567-8"])
-    description: Optional[str] = Field(None, max_length=2000, description="Book description", examples=["Epicka powieść fantasy..."])
-    publisher: Optional[str] = Field(None, max_length=200, description="Book publisher", examples=["Wydawnictwo XYZ"])
-    publication_year: Optional[int] = Field(None, ge=1000, le=2100, description="Year of publication", examples=[1954])
-    page_count: Optional[int] = Field(None, ge=1, description="Number of pages", examples=[400])
-    language: Optional[str] = Field(None, max_length=50, description="Book language", examples=["pl", "en"])
-    genre: Optional[str] = Field(None, max_length=100, description="Book genre", examples=["Fantasy"])
     cover_path: Optional[str] = Field(None, max_length=500, description="Path or URL to book cover image", examples=["/covers/9780261102385.jpg"])
-
-    @field_validator('isbn')
-    @classmethod
-    def validate_isbn(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return v
-        cleaned = v.replace('-', '').replace(' ', '')
-        if not cleaned.isdigit():
-            raise ValueError('ISBN must contain only digits and hyphens')
-        if len(cleaned) not in [10, 13]:
-            raise ValueError('ISBN must be 10 or 13 digits')
-        return cleaned
 
 
 class BookUpdate(BaseModel):
