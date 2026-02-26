@@ -53,3 +53,13 @@ class RefreshTokenInvalidException(ShareBookException):
             message="Invalid or expired refresh token",
             code="INVALID_REFRESH_TOKEN"
         )
+
+
+class PasswordTooWeakException(ShareBookException):
+    
+    def __init__(self, reason: str):
+        super().__init__(
+            message=f"Password too weak: {reason}",
+            code="PASSWORD_TOO_WEAK",
+            details={"reason": reason}
+        )
