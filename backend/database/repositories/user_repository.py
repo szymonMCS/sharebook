@@ -11,13 +11,13 @@ class UserRepository(BaseRepository[User]):
         super().__init__(db, User)
     
     async def get_by_email(self, email: str) -> Optional[User]:
-        result = await self.db.execute(
+        result = await self._db.execute(
             select(User).where(User.email == email)
         )
         return result.scalar_one_or_none()
     
     async def email_exists(self, email: str) -> bool:
-        result = await self.db.execute(
+        result = await self._db.execute(
             select(User).where(User.email == email)
         )
         return result.scalar_one_or_none() is not None

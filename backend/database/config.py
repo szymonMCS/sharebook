@@ -59,6 +59,11 @@ async def reset_db():
         await conn.run_sync(Base.metadata.create_all)
     print("[OK] Database reset complete")
 
+async def close_db():
+    await engine.dispose()
+    print("[OK] Database connections closed")
+
+
 async def get_db_status() -> dict:
     try:
         async with engine.connect() as conn:

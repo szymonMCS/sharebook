@@ -1,7 +1,8 @@
 from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
+from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 from uuid import UUID
 from typing import Optional
+from zxcvbn import zxcvbn
 
 
 class UserBase(BaseModel):
@@ -18,7 +19,15 @@ class UserCreate(UserBase):
     first_name: str = Field(..., min_length=1, max_length=100, examples=["Jan"], description="User first name")
     last_name: str = Field(...,  min_length=1, max_length=100, examples=["Kowalski"], description="User last name")
     location: str = Field(...,  max_length=200, examples=["Warszawa"], description="User location (city) for book exchanges")
-    phone: Optional[str] = Field(None, max_length=50, examples=["+48 123 456 789"], description="Contact phone number")
+    phone: str = Field(..., max_length=50, examples=["+48 123 456 789"], description="Contact phone number")
+
+    @field_validator('password')
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        result = zxcvbn(v)
+        if result['score'] < 2:  # 0-4 scale
+            raise ValueError(f'Password too weak: {result["feedback"]["warning"] or "Use stronger password"}')
+        return v
 
 
 class UserCreateInternal(UserBase):

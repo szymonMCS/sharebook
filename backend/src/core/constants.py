@@ -35,3 +35,26 @@ HTTP_404_NOT_FOUND = 404
 HTTP_409_CONFLICT = 409
 HTTP_422_UNPROCESSABLE_ENTITY = 422
 HTTP_500_INTERNAL_SERVER_ERROR = 500
+
+ERROR_CSRF_TOKEN_INVALID = "Invalid CSRF token"
+ERROR_CSRF_TOKEN_MISSING = "CSRF token missing"
+ERROR_INACTIVE_USER = "User account is inactive"
+ERROR_INVALID_TOKEN = "Invalid authentication token"
+ERROR_MISSING_TOKEN = "Authentication token missing"
+ERROR_INVALID_CREDENTIALS = "Invalid email or password"
+MSG_LOGIN_SUCCESS = "Login successful"
+MSG_LOGOUT_SUCCESS = "Logout successful"
+MSG_REGISTER_SUCCESS = "User registered successfully"
+MSG_TOKEN_REFRESHED = "Token refreshed successfully"
+
+COOKIE_CONFIG = {
+    "httponly": True,
+    "secure": False,
+    "samesite": "lax",
+}
+
+CSRF_COOKIE_CONFIG = {
+    "httponly": False,
+    "secure": False,
+    "samesite": "lax",
+}

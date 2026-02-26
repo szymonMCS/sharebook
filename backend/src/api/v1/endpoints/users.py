@@ -1,48 +1,32 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
-
-from src.api.deps import get_db
-from src.schemas.user import UserCreate, UserResponse
-from src.services.user_service import UserService
+from src.api.deps import get_user_service
+from src.schemas.user import UserUpdate, UserResponse
+from src.services.interfaces import IUserService
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-
-def get_user_service(db: AsyncSession = Depends(get_db)) -> UserService:
-    return UserService(db)
-
-
-def _handle_service_error(exc: ValueError, status_code: int = status.HTTP_400_BAD_REQUEST):
-    raise HTTPException(status_code=status_code, detail=str(exc))
-
-
-@router.post(
-    "/register",
-    response_model=UserResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Zarejestruj nowego użytkownika",
-)
-async def register(
-    user_data: UserCreate,
-    service: UserService = Depends(get_user_service),
-):
+@router.get("/{user_id}", response_model=UserResponse, summary="Get user by ID")
+async def get_user(user_id: str, user_service: IUserService = Depends(get_user_service),):
     try:
-        return await service.register(user_data)
+        return await user_service.get_by_id(UUID(user_id))
     except ValueError as e:
-        _handle_service_error(e, status.HTTP_400_BAD_REQUEST)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
-
-@router.get(
-    "/{user_id}",
-    response_model=UserResponse,
-    summary="Pobierz dane użytkownika",
-)
-async def get_user(
-    user_id: str,
-    service: UserService = Depends(get_user_service),
-):
+@router.get("/{user_id}/profile", response_model=dict, summary="Get user profile")
+async def get_user_profile(user_id: str, user_service: IUserService = Depends(get_user_service),):
     try:
-        return await service.get_by_id(UUID(user_id))
+        profile = await user_service.get_profile(UUID(user_id))
+        return {
+            "success": True,
+            "data": {"profile": profile.model_dump()}
+        }
     except ValueError as e:
-        _handle_service_error(e, status.HTTP_404_NOT_FOUND)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+@router.patch("/{user_id}", response_model=UserResponse, summary="Update user")
+async def update_user(user_id: str, user_update: UserUpdate, user_service: IUserService = Depends(get_user_service),):
+    try:
+        return await user_service.update(UUID(user_id), user_update)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
