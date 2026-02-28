@@ -80,7 +80,6 @@ class UserBook(Base):
     status: Mapped[str] = mapped_column(String(50), default="available", nullable=False)
     condition: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     is_lendable: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    user_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     
@@ -95,4 +94,4 @@ class UserBook(Base):
     )
     
     def __repr__(self) -> str:
-        return f"<UserBook(id={self.id}, status={self.status}, lendable={self.is_lendable})>"
+        return f"<UserBook(id={self.id}, book_id={self.book_id}, status={self.status}, condition={self.condition})>"

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
-from typing import Optional
+from typing import Optional, List
 from src.schemas.user import UserCreate, UserUpdate, UserResponse, UserProfileResponse
 
 
@@ -10,7 +10,9 @@ class IAuthService(ABC):
         pass
 
 
+
 class IUserService(ABC):
+
     @abstractmethod
     async def get_by_id(self, user_id: UUID) -> UserResponse:
         pass
@@ -33,6 +35,7 @@ class IUserService(ABC):
 
 
 class IRegistrationService(ABC):
+
     @abstractmethod
     async def register(self, user_data: UserCreate) -> UserResponse:
         pass
@@ -49,6 +52,7 @@ class IPasswordService(ABC):
 
 
 class ITokenService(ABC):
+
     @abstractmethod
     def generate_token_pair(self, user_id: UUID) -> tuple[str, str, str]:
         pass
@@ -62,13 +66,168 @@ class ITokenService(ABC):
         pass
 
 
+class IBookCatalogService(ABC):
+
+    @abstractmethod
+    async def get_by_id(self, book_id: UUID) -> "BookResponse":
+        pass
+
+    @abstractmethod
+    async def get_by_isbn(self, isbn: str) -> Optional["BookResponse"]:
+        pass
+
+    @abstractmethod
+    async def search(
+        self,
+        query: Optional[str] = None,
+        author: Optional[str] = None,
+        genre: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 20
+    ) -> tuple[List["BookResponse"], int]:
+        pass
+
+    @abstractmethod
+    async def create(self, data: "BookCreate") -> "BookResponse":
+        pass
+
+    @abstractmethod
+    async def update(self, book_id: UUID, data: "BookUpdate") -> "BookResponse":
+        pass
+
+
+class IUserLibraryService(ABC):
+
+    @abstractmethod
+    async def add_book_to_library(
+        self,
+        user_id: UUID,
+        isbn: str,
+        condition: str
+    ) -> "UserBookResponse":
+        pass
+
+    @abstractmethod
+    async def get_library(self, user_id: UUID, skip: int = 0, limit: int = 100) -> List["UserBookResponse"]:
+        pass
+
+    @abstractmethod
+    async def get_library_item(self, user_id: UUID, user_book_id: UUID) -> Optional["UserBookResponse"]:
+        pass
+
+    @abstractmethod
+    async def remove_from_library(self, user_id: UUID, user_book_id: UUID) -> bool:
+        pass
+
+    @abstractmethod
+    async def update_lendable_status(
+        self,
+        user_id: UUID,
+        user_book_id: UUID,
+        is_lendable: bool
+    ) -> "UserBookResponse":
+        pass
+
+    @abstractmethod
+    async def update_status(
+        self,
+        user_id: UUID,
+        user_book_id: UUID,
+        status: str 
+    ) -> "UserBookResponse":
+        pass
+
+    @abstractmethod
+    async def get_community_books(
+        self,
+        exclude_user_id: Optional[UUID] = None,
+        status: Optional[str] = None,
+        search: Optional[str] = None,
+        author: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 20
+    ) -> tuple[List["CommunityBookResponse"], int]:
+        pass
+
+
+class IBookMetadataProvider(ABC):
+
+    @abstractmethod
+    async def fetch_by_isbn(self, isbn: str) -> Optional["BookMetadata"]:
+        pass
+
+    @abstractmethod
+    async def search_by_title(self, title: str, max_results: int = 10) -> List["BookMetadata"]:
+        pass
+
+
+class IBookImportService(ABC):
+
+    @abstractmethod
+    async def import_by_isbn(self, isbn: str) -> "BookResponse":
+        pass
+
+    @abstractmethod
+    async def enrich_book_data(self, book_id: UUID) -> "BookResponse":
+        pass
+
+    @abstractmethod
+    async def search_and_import(self, query: str, limit: int = 5) -> List["BookResponse"]:
+        pass
+
+
+class BookMetadata:
+    
+    def __init__(
+        self,
+        isbn: str,
+        title: str,
+        author: str,
+        description: Optional[str] = None,
+        publisher: Optional[str] = None,
+        publication_year: Optional[int] = None,
+        page_count: Optional[int] = None,
+        language: Optional[str] = None,
+        genre: Optional[str] = None,
+        cover_url: Optional[str] = None
+    ):
+        self.isbn = isbn
+        self.title = title
+        self.author = author
+        self.description = description
+        self.publisher = publisher
+        self.publication_year = publication_year
+        self.page_count = page_count
+        self.language = language
+        self.genre = genre
+        self.cover_url = cover_url
+
+
+# Forward references for type hints
+BookResponse = "BookResponse"
+BookCreate = "BookCreate"
+BookUpdate = "BookUpdate"
+UserBookResponse = "UserBookResponse"
+CommunityBookResponse = "CommunityBookResponse"
+
+
 class IRepositoryFactory(ABC):
+
     @abstractmethod
     def create_user_repository(self) -> "IUserRepository":
         pass
 
+    @abstractmethod
+    def create_book_repository(self) -> "IBookRepository":
+        pass
+
+    @abstractmethod
+    def create_user_book_repository(self) -> "IUserBookRepository":
+        pass
+
 
 class IServiceFactory(ABC):
+
     @abstractmethod
     def create_auth_service(self) -> IAuthService:
         pass
@@ -87,4 +246,16 @@ class IServiceFactory(ABC):
 
     @abstractmethod
     def create_password_service(self) -> IPasswordService:
+        pass
+
+    @abstractmethod
+    def create_book_catalog_service(self) -> IBookCatalogService:
+        pass
+
+    @abstractmethod
+    def create_user_library_service(self) -> IUserLibraryService:
+        pass
+
+    @abstractmethod
+    def create_book_import_service(self) -> IBookImportService:
         pass

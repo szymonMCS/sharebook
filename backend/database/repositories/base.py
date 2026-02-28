@@ -8,7 +8,6 @@ from database.repositories.interfaces import IRepository, IUserRepository
 ModelType = TypeVar("ModelType")
 
 class BaseRepository(IRepository[ModelType]):
-    
     def __init__(self, model: Type[ModelType], db: AsyncSession):
         super().__init__(db)
         self._model = model

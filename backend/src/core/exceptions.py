@@ -45,7 +45,6 @@ class UserNotFoundException(ShareBookException):
             details=details
         )
 
-
 class RefreshTokenInvalidException(ShareBookException):
 
     def __init__(self):
@@ -54,7 +53,6 @@ class RefreshTokenInvalidException(ShareBookException):
             code="INVALID_REFRESH_TOKEN"
         )
 
-
 class PasswordTooWeakException(ShareBookException):
     
     def __init__(self, reason: str):
@@ -62,4 +60,40 @@ class PasswordTooWeakException(ShareBookException):
             message=f"Password too weak: {reason}",
             code="PASSWORD_TOO_WEAK",
             details={"reason": reason}
+        )
+
+
+class BookNotFoundException(ShareBookException):
+    
+    def __init__(self, book_id: Any = None):
+        details = {}
+        if book_id:
+            message = f"Book with id '{book_id}' not found"
+            details["book_id"] = str(book_id)
+        else:
+            message = "Book not found"
+        
+        super().__init__(
+            message=message,
+            code="BOOK_NOT_FOUND",
+            details=details
+        )
+
+
+class DuplicateISBNException(ShareBookException):
+    
+    def __init__(self, isbn: str):
+        super().__init__(
+            message=f"Book with ISBN '{isbn}' already exists",
+            code="DUPLICATE_ISBN",
+            details={"isbn": isbn}
+        )
+
+
+class NotBookOwnerException(ShareBookException):
+    
+    def __init__(self):
+        super().__init__(
+            message="You are not the owner of this book",
+            code="NOT_BOOK_OWNER"
         )

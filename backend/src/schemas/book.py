@@ -53,6 +53,24 @@ class BookUpdate(BaseModel):
     cover_path: Optional[str] = Field(None, max_length=500, description="Path or URL to book cover")
 
 
+class UpdateLendableRequest(BaseModel):
+    
+    is_lendable: bool = Field(..., description="Whether this book can be lent to others")
+
+
+class UpdateStatusRequest(BaseModel):
+    
+    status: str = Field(..., description="Book status: available, reserved, borrowed, unavailable, lent")
+    
+    @field_validator('status')
+    @classmethod
+    def validate_status(cls, v: str) -> str:
+        valid_statuses = ['available', 'reserved', 'borrowed', 'unavailable', 'lent']
+        if v not in valid_statuses:
+            raise ValueError(f'Invalid status. Must be one of: {', '.join(valid_statuses)}')
+        return v
+
+
 class OwnerInfo(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
@@ -81,7 +99,6 @@ class UserBookResponse(BaseModel):
     status: str = Field(..., description="Status: available, reserved, borrowed, unavailable")
     condition: Optional[str] = Field(None, description="Condition: new, good, fair, poor")
     is_lendable: bool = Field(default=True, description="Whether this copy can be lent")
-    user_notes: Optional[str] = Field(None, description="Owner notes about this copy")
     book: BookResponse
     added_at: datetime
     updated_at: datetime
@@ -91,3 +108,58 @@ class BookWithOwnersResponse(BookResponse):
 
     owners: List[OwnerInfo] = Field(default_factory=list, description="List of users who own this book")
     available_count: int = Field(default=0, description="Number of available copies")
+
+
+class CommunityBookResponse(BookBase):
+    
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+    
+    id: UUID
+    cover_url: Optional[str] = None
+    publisher: Optional[str] = None
+    publication_year: Optional[int] = None
+    page_count: Optional[int] = None
+    owner_id: UUID
+    owner: OwnerInfo
+    status: str
+    condition: Optional[str] = None
+    is_lendable: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class BookCondition:
+    """Valid book conditions."""
+    NEW = "new"
+    GOOD = "good"
+    FAIR = "fair"
+    POOR = "poor"
+    
+    ALL = [NEW, GOOD, FAIR, POOR]
+
+
+class AddBookToLibraryRequest(BaseModel):
+    """Request to add book to user's library.
+    
+    Only ISBN and condition required. Multiple copies allowed.
+    """
+    
+    model_config = ConfigDict(populate_by_name=True)
+    
+    isbn: str = Field(..., min_length=10, max_length=17, description="ISBN-10 or ISBN-13")
+    condition: str = Field(..., description="Book condition: new, good, fair, poor")
+    
+    @field_validator('isbn')
+    @classmethod
+    def validate_isbn(cls, v: str) -> str:
+        cleaned = v.replace('-', '').replace(' ', '').upper()
+        if not ISBN_PATTERN.match(cleaned):
+            raise ValueError('Invalid ISBN format. Must be ISBN-10 (10 chars) or ISBN-13 (13 digits)')
+        return cleaned
+    
+    @field_validator('condition')
+    @classmethod
+    def validate_condition(cls, v: str) -> str:
+        if v not in BookCondition.ALL:
+            raise ValueError(f'Invalid condition. Must be one of: {', '.join(BookCondition.ALL)}')
+        return v
