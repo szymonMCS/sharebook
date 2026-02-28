@@ -1,4 +1,5 @@
 from typing import AsyncGenerator, Optional
+from uuid import UUID
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,8 +25,12 @@ from src.services.interfaces import (
     IUserService,
     IRegistrationService,
     ITokenService,
+    IBookCatalogService,
+    IUserLibraryService,
+    IBookImportService,
 )
 from src.services.factories import ServiceFactory, RepositoryFactory
+
 
 security = HTTPBearer(auto_error=False)
 
@@ -40,26 +45,51 @@ def get_repository_factory():
 
 
 def get_service_factory(
-    db: AsyncSession = Depends(get_db)) -> ServiceFactory:
+    db: AsyncSession = Depends(get_db)
+) -> ServiceFactory:
     return ServiceFactory(db=db)
 
 
 def get_auth_service(
-    factory: ServiceFactory = Depends(get_service_factory)) -> IAuthService:
+    factory: ServiceFactory = Depends(get_service_factory)
+) -> IAuthService:
     return factory.create_auth_service()
 
+
 def get_user_service(
-    factory: ServiceFactory = Depends(get_service_factory)) -> IUserService:
+    factory: ServiceFactory = Depends(get_service_factory)
+) -> IUserService:
     return factory.create_user_service()
 
+
 def get_registration_service(
-    factory: ServiceFactory = Depends(get_service_factory)) -> IRegistrationService:
+    factory: ServiceFactory = Depends(get_service_factory)
+) -> IRegistrationService:
     return factory.create_registration_service()
 
+
 def get_token_service(
-    factory: ServiceFactory = Depends(get_service_factory)) -> ITokenService:
+    factory: ServiceFactory = Depends(get_service_factory)
+) -> ITokenService:
     return factory.create_token_service()
 
+
+def get_book_catalog_service(
+    factory: ServiceFactory = Depends(get_service_factory)
+) -> IBookCatalogService:
+    return factory.create_book_catalog_service()
+
+
+def get_user_library_service(
+    factory: ServiceFactory = Depends(get_service_factory)
+) -> IUserLibraryService:
+    return factory.create_user_library_service()
+
+
+def get_book_import_service(
+    factory: ServiceFactory = Depends(get_service_factory)
+) -> IBookImportService:
+    return factory.create_book_import_service()
 
 async def extract_token_from_request(request: Request) -> Optional[str]:
     return request.cookies.get(ACCESS_TOKEN_COOKIE)
@@ -70,11 +100,10 @@ def validate_token_payload(token: str) -> Optional[dict]:
         return None
     return payload
 
-
 async def get_current_user(
     request: Request,
-    db: AsyncSession = Depends(get_db)) -> User:
-
+    db: AsyncSession = Depends(get_db)
+) -> User:
     token = await extract_token_from_request(request)
     if not token:
         raise HTTPException(
@@ -82,6 +111,7 @@ async def get_current_user(
             detail=ERROR_MISSING_TOKEN,
             headers={"WWW-Authenticate": WWW_AUTHENTICATE_HEADER},
         )
+
     payload = validate_token_payload(token)
     if not payload:
         raise HTTPException(
@@ -89,6 +119,7 @@ async def get_current_user(
             detail=ERROR_INVALID_TOKEN,
             headers={"WWW-Authenticate": WWW_AUTHENTICATE_HEADER},
         )
+
     user_id_str = payload.get("sub")
     if not user_id_str:
         raise HTTPException(
@@ -96,9 +127,7 @@ async def get_current_user(
             detail=ERROR_INVALID_TOKEN,
             headers={"WWW-Authenticate": WWW_AUTHENTICATE_HEADER},
         )
-    
-    from uuid import UUID
-    
+
     user_id = UUID(user_id_str)
     user_repo = UserRepository(db)
     user = await user_repo.get(user_id)
@@ -109,11 +138,12 @@ async def get_current_user(
             detail=ERROR_INVALID_TOKEN,
             headers={"WWW-Authenticate": WWW_AUTHENTICATE_HEADER},
         )
+
     return user
 
-
 async def get_current_active_user(
-    current_user: User = Depends(get_current_user)) -> User:
+    current_user: User = Depends(get_current_user)
+) -> User:
     if not current_user.is_active:
         raise HTTPException(
             status_code=HTTP_403_FORBIDDEN,
@@ -124,7 +154,8 @@ async def get_current_active_user(
 
 async def verify_csrf_protection(
     request: Request,
-    current_user: User = Depends(get_current_active_user)) -> User:
+    current_user: User = Depends(get_current_active_user)
+) -> User:
     if request.method in ("GET", "HEAD", "OPTIONS"):
         return current_user
 
@@ -136,14 +167,26 @@ async def verify_csrf_protection(
             status_code=HTTP_403_FORBIDDEN,
             detail=ERROR_CSRF_TOKEN_MISSING,
         )
+
     if not cookie_token:
         raise HTTPException(
             status_code=HTTP_403_FORBIDDEN,
             detail=ERROR_CSRF_TOKEN_INVALID,
         )
+
     if not verify_csrf_token(header_token, cookie_token):
         raise HTTPException(
             status_code=HTTP_403_FORBIDDEN,
             detail=ERROR_CSRF_TOKEN_INVALID,
         )
+
     return current_user
+
+async def get_current_user_optional(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+) -> Optional[User]:
+    try:
+        return await get_current_user(request, db)
+    except HTTPException:
+        return None
