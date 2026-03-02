@@ -18,6 +18,8 @@ async def search_books(
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
     catalog_service: IBookCatalogService = Depends(get_book_catalog_service)
 ):
+    from src.core.response import create_pagination_meta
+    
     skip = (page - 1) * per_page
     books, total = await catalog_service.search(
         query=query,
@@ -30,11 +32,8 @@ async def search_books(
     return {
         "success": True,
         "data": books,
-        "pagination": {
-            "page": page,
-            "per_page": per_page,
-            "total": total,
-            "total_pages": (total + per_page - 1) // per_page
+        "meta": {
+            "pagination": create_pagination_meta(page, per_page, total)
         }
     }
 

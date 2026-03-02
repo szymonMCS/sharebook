@@ -1,31 +1,24 @@
 import logging
 from uuid import UUID
 from typing import Optional, List
-from src.services.interfaces import IUserLibraryService
-from database.interfaces import IUserBookRepository, IBookRepository, IUserRepository
-from src.schemas.book import UserBookResponse, CommunityBookResponse, OwnerInfo
+from src.services.interfaces import ILibraryManagementService
+from database.interfaces import IUserBookRepository, IBookRepository
+from src.schemas.book import UserBookResponse
 from src.core.exceptions import BookNotFoundException, NotBookOwnerException
 
 logger = logging.getLogger(__name__)
 
 
-class UserLibraryService(IUserLibraryService):
+class LibraryManagementService(ILibraryManagementService):
     def __init__(
         self,
         user_book_repo: IUserBookRepository,
-        book_repo: IBookRepository,
-        user_repo: IUserRepository
+        book_repo: IBookRepository
     ):
         self._user_book_repo = user_book_repo
         self._book_repo = book_repo
-        self._user_repo = user_repo
 
-    async def add_book_to_library(
-        self,
-        user_id: UUID,
-        isbn: str,
-        condition: str
-    ) -> UserBookResponse:
+    async def add_book_to_library(self, user_id: UUID, isbn: str, condition: str) -> UserBookResponse:
         book = await self._book_repo.get_by_isbn(isbn)
         if not book:
             book = await self._book_repo.create(
@@ -42,7 +35,7 @@ class UserLibraryService(IUserLibraryService):
             book_id=book.id,
             status="available",
             condition=condition,
-            is_lendable=True 
+            is_lendable=True
         )
         logger.info(f"Book {book.id} added to user {user_id} library as new copy")
         return await self._get_user_book_response(user_book)
@@ -64,31 +57,26 @@ class UserLibraryService(IUserLibraryService):
         user_book = await self._user_book_repo.get_by_id(user_book_id)
         if not user_book:
             raise BookNotFoundException(user_book_id)
-        
+
         if user_book.user_id != user_id:
             raise NotBookOwnerException()
-        
+
         if user_book.status in ["borrowed", "lent"]:
             raise ValueError("Cannot remove borrowed or lent book")
-        
+
         success = await self._user_book_repo.delete(user_book_id)
         if success:
             logger.info(f"Book {user_book_id} removed from user {user_id} library")
         return success
 
-    async def update_lendable_status(
-        self,
-        user_id: UUID,
-        user_book_id: UUID,
-        is_lendable: bool
-    ) -> UserBookResponse:
+    async def update_lendable_status(self, user_id: UUID, user_book_id: UUID, is_lendable: bool) -> UserBookResponse:
         user_book = await self._user_book_repo.get_by_id(user_book_id)
         if not user_book:
             raise BookNotFoundException(user_book_id)
-        
+
         if user_book.user_id != user_id:
             raise NotBookOwnerException()
-        
+
         updated = await self._user_book_repo.update(
             user_book_id,
             is_lendable=is_lendable
@@ -96,77 +84,17 @@ class UserLibraryService(IUserLibraryService):
         logger.info(f"Book {user_book_id} lendable status changed to {is_lendable}")
         return await self._get_user_book_response(updated)
 
-    async def update_status(
-        self,
-        user_id: UUID,
-        user_book_id: UUID,
-        status: str
-    ) -> UserBookResponse:
+    async def update_status(self, user_id: UUID, user_book_id: UUID, status: str) -> UserBookResponse:
         user_book = await self._user_book_repo.get_by_id(user_book_id)
         if not user_book:
             raise BookNotFoundException(user_book_id)
-        
+
         if user_book.user_id != user_id:
             raise NotBookOwnerException()
-        
+
         updated = await self._user_book_repo.update(user_book_id, status=status)
         logger.info(f"Book {user_book_id} status changed to {status}")
         return await self._get_user_book_response(updated)
-
-    async def get_community_books(
-        self,
-        exclude_user_id: Optional[UUID] = None,
-        status: Optional[str] = None,
-        search: Optional[str] = None,
-        author: Optional[str] = None,
-        skip: int = 0,
-        limit: int = 20
-    ) -> tuple[List[CommunityBookResponse], int]:
-        results = await self._user_book_repo.get_available_for_community(
-            exclude_user_id=exclude_user_id,
-            status=status,
-            search=search,
-            author=author,
-            skip=skip,
-            limit=limit
-        )
-        
-        total = await self._user_book_repo.count_available_for_community(
-            exclude_user_id=exclude_user_id,
-            status=status,
-            search=search,
-            author=author
-        )
-        
-        responses = []
-        for book, user_book, owner in results:
-            responses.append(CommunityBookResponse(
-                id=book.id,
-                isbn=book.isbn,
-                title=book.title,
-                author=book.author,
-                description=book.description,
-                cover_url=f"/covers/{book.isbn}.jpg" if book.isbn else None,
-                publisher=book.publisher,
-                publication_year=book.publication_year,
-                page_count=book.page_count,
-                language=book.language,
-                genre=book.genre,
-                owner_id=user_book.user_id,
-                owner=OwnerInfo(
-                    id=owner.id,
-                    first_name=owner.first_name,
-                    last_name=owner.last_name,
-                    location=owner.location
-                ),
-                status=user_book.status,
-                condition=user_book.condition,
-                is_lendable=user_book.is_lendable,
-                created_at=book.created_at,
-                updated_at=book.updated_at
-            ))
-        
-        return responses, total
 
     async def _get_user_book_response(self, user_book) -> UserBookResponse:
         book = await self._book_repo.get_by_id(user_book.book_id)

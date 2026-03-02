@@ -1,9 +1,15 @@
+import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from database.config import init_db, close_db
 from src.api.v1.router import api_router
 from src.config import settings
+from src.core.exceptions import ShareBookException
+from src.core.response import APIResponse
+
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -52,6 +58,31 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix="/api/v1")
+
+@app.exception_handler(ShareBookException)
+async def sharebook_exception_handler(request: Request, exc: ShareBookException):
+    """Globalny handler dla wyjątków ShareBookException."""
+    logger.warning(f"ShareBookException: {exc.code} - {exc.message}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=APIResponse.error(
+            message=exc.message,
+            meta={"code": exc.code, "details": exc.details}
+        ).model_dump()
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """Globalny handler dla nieobsłużonych wyjątków."""
+    logger.exception(f"Unhandled exception: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content=APIResponse.error(
+            message="Internal server error" if not settings.DEBUG else str(exc)
+        ).model_dump()
+    )
+
 
 @app.get("/")
 async def root():

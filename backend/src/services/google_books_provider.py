@@ -1,28 +1,18 @@
-"""
-Google Books Provider - Implementation of IBookMetadataProvider.
-Single Responsibility: Fetch book metadata from Google Books API.
-"""
 import logging
 from typing import Optional, List
 
 import httpx
 
-from src.services.interfaces import IBookMetadataProvider, BookMetadata
+from src.services.interfaces import IBookMetadataProvider, IMetadataProviderFactory, BookMetadata
 
 logger = logging.getLogger(__name__)
 
 
 class GoogleBooksProvider(IBookMetadataProvider):
-    """
-    Provider for fetching book metadata from Google Books API.
-    
-    API Documentation: https://developers.google.com/books/docs/v1/using
-    """
 
     BASE_URL = "https://www.googleapis.com/books/v1"
 
     async def fetch_by_isbn(self, isbn: str) -> Optional[BookMetadata]:
-        """Fetch book metadata by ISBN from Google Books."""
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
@@ -48,7 +38,6 @@ class GoogleBooksProvider(IBookMetadataProvider):
                 return None
 
     async def search_by_title(self, title: str, max_results: int = 10) -> List[BookMetadata]:
-        """Search books by title in Google Books."""
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
@@ -79,8 +68,6 @@ class GoogleBooksProvider(IBookMetadataProvider):
                 return []
 
     def _parse_volume(self, volume: dict, isbn: str) -> BookMetadata:
-        """Parse Google Books volume info to BookMetadata."""
-        # Extract year from publishedDate (format: "YYYY-MM-DD" or "YYYY")
         published_date = volume.get("publishedDate", "")
         year = None
         if published_date:
@@ -89,11 +76,9 @@ class GoogleBooksProvider(IBookMetadataProvider):
             except (ValueError, IndexError):
                 pass
 
-        # Get cover URL
         image_links = volume.get("imageLinks", {})
         cover_url = image_links.get("thumbnail") or image_links.get("smallThumbnail")
 
-        # Get genre (first category)
         categories = volume.get("categories", [])
         genre = categories[0] if categories else None
 
@@ -119,6 +104,12 @@ class GoogleBooksProvider(IBookMetadataProvider):
             if ident.get("type") == "ISBN_10":
                 return ident.get("identifier")
         return None
+
+
+class GoogleBooksProviderFactory(IMetadataProviderFactory):
+
+    def create_provider(self) -> IBookMetadataProvider:
+        return GoogleBooksProvider()
 
 
 class MockBookMetadataProvider(IBookMetadataProvider):

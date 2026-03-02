@@ -3,7 +3,7 @@ from typing import TypeVar, Generic, List, Optional, Type
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from database.repositories.interfaces import IRepository, IUserRepository
+from database.interfaces import IRepository, IUserRepository
 
 ModelType = TypeVar("ModelType")
 

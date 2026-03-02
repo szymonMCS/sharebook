@@ -29,7 +29,7 @@ class BookRepository(IBookRepository):
         await self._db.refresh(book)
         return book
 
-    async def update(self, id: uuid.UUID, book_data) -> Optional[Book]:
+    async def update(self, id: uuid.UUID, book_data: dict) -> Optional[Book]:
         book = await self.get_by_id(id)
         if not book:
             return None
@@ -46,12 +46,6 @@ class BookRepository(IBookRepository):
         await self._db.commit()
         await self._db.refresh(book)
         return book
-
-    async def update_cover_path(self, book_id: uuid.UUID, cover_path: str) -> None:
-        book = await self.get_by_id(book_id)
-        if book:
-            book.cover_path = cover_path
-            await self._db.commit()
 
     async def delete(self, id: uuid.UUID) -> bool:
         book = await self.get_by_id(id)

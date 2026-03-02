@@ -26,7 +26,8 @@ from src.services.interfaces import (
     IRegistrationService,
     ITokenService,
     IBookCatalogService,
-    IUserLibraryService,
+    ILibraryManagementService,
+    ICommunityBookService,
     IBookImportService,
 )
 from src.services.factories import ServiceFactory, RepositoryFactory
@@ -80,10 +81,17 @@ def get_book_catalog_service(
     return factory.create_book_catalog_service()
 
 
-def get_user_library_service(
+def get_library_management_service(
     factory: ServiceFactory = Depends(get_service_factory)
-) -> IUserLibraryService:
-    return factory.create_user_library_service()
+) -> ILibraryManagementService:
+    return factory.create_library_management_service()
+
+
+def get_community_book_service(
+    factory: ServiceFactory = Depends(get_service_factory)
+) -> ICommunityBookService:
+    return factory.create_community_book_service()
+
 
 
 def get_book_import_service(
@@ -190,3 +198,29 @@ async def get_current_user_optional(
         return await get_current_user(request, db)
     except HTTPException:
         return None
+
+
+async def verify_csrf_token_only(request: Request) -> None:
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return
+
+    header_token = request.headers.get(CSRF_HEADER_NAME)
+    cookie_token = request.cookies.get(CSRF_TOKEN_COOKIE)
+
+    if not header_token:
+        raise HTTPException(
+            status_code=HTTP_403_FORBIDDEN,
+            detail=ERROR_CSRF_TOKEN_MISSING,
+        )
+
+    if not cookie_token:
+        raise HTTPException(
+            status_code=HTTP_403_FORBIDDEN,
+            detail=ERROR_CSRF_TOKEN_INVALID,
+        )
+
+    if not verify_csrf_token(header_token, cookie_token):
+        raise HTTPException(
+            status_code=HTTP_403_FORBIDDEN,
+            detail=ERROR_CSRF_TOKEN_INVALID,
+        )

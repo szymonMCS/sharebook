@@ -4,15 +4,13 @@ from src.api.deps import (
     get_auth_service,
     get_registration_service,
     get_token_service,
-    get_current_active_user,
     verify_csrf_protection,
+    verify_csrf_token_only,
 )
 from src.core.constants import (
     ACCESS_TOKEN_COOKIE,
     REFRESH_TOKEN_COOKIE,
     CSRF_TOKEN_COOKIE,
-    COOKIE_CONFIG,
-    CSRF_COOKIE_CONFIG,
     ACCESS_TOKEN_MAX_AGE,
     REFRESH_TOKEN_MAX_AGE,
     CSRF_TOKEN_MAX_AGE,
@@ -25,6 +23,7 @@ from src.core.constants import (
     HTTP_401_UNAUTHORIZED,
     ERROR_INVALID_CREDENTIALS,
 )
+from src.core.security import get_cookie_config, get_csrf_cookie_config
 from src.core.exceptions import ShareBookException
 from src.schemas.user import UserCreate
 from src.services.interfaces import IAuthService, IRegistrationService, ITokenService
@@ -33,9 +32,9 @@ from database.models import User
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 def set_auth_cookies(response: Response, access_token: str, refresh_token: str, csrf_token: str) -> None:
-    response.set_cookie(ACCESS_TOKEN_COOKIE, access_token, max_age=ACCESS_TOKEN_MAX_AGE, **COOKIE_CONFIG)
-    response.set_cookie(REFRESH_TOKEN_COOKIE, refresh_token, max_age=REFRESH_TOKEN_MAX_AGE, **COOKIE_CONFIG)
-    response.set_cookie(CSRF_TOKEN_COOKIE, csrf_token, max_age=CSRF_TOKEN_MAX_AGE, **CSRF_COOKIE_CONFIG)
+    response.set_cookie(ACCESS_TOKEN_COOKIE, access_token, max_age=ACCESS_TOKEN_MAX_AGE, **get_cookie_config())
+    response.set_cookie(REFRESH_TOKEN_COOKIE, refresh_token, max_age=REFRESH_TOKEN_MAX_AGE, **get_cookie_config())
+    response.set_cookie(CSRF_TOKEN_COOKIE, csrf_token, max_age=CSRF_TOKEN_MAX_AGE, **get_csrf_cookie_config())
 
 def clear_auth_cookies(response: Response) -> None:
     response.delete_cookie(ACCESS_TOKEN_COOKIE, path="/")
@@ -58,11 +57,8 @@ async def register(
     access_token, refresh_token, csrf_token = token_service.generate_token_pair(user.id)
     set_auth_cookies(response, access_token, refresh_token, csrf_token)
 
-    return {
-        "success": True,
-        "data": {"user": user.model_dump()},
-        "message": MSG_REGISTER_SUCCESS
-    }
+    from src.core.response import APIResponse
+    return APIResponse.ok(data={"user": user.model_dump()}, message=MSG_REGISTER_SUCCESS)
 
 @router.post("/login", response_model=dict)
 async def login(
@@ -84,11 +80,7 @@ async def login(
     access_token, refresh_token, csrf_token = token_service.generate_token_pair(user.id)
     set_auth_cookies(response, access_token, refresh_token, csrf_token)
 
-    return {
-        "success": True,
-        "data": {"user": user.model_dump()},
-        "message": MSG_LOGIN_SUCCESS
-    }
+    return APIResponse.ok(data={"user": user.model_dump()}, message=MSG_LOGIN_SUCCESS)
 
 @router.post("/logout", status_code=HTTP_204_NO_CONTENT)
 async def logout(response: Response, request: Request, current_user: User = Depends(verify_csrf_protection)):
@@ -96,7 +88,12 @@ async def logout(response: Response, request: Request, current_user: User = Depe
     return None
 
 @router.post("/refresh", response_model=dict)
-async def refresh(response: Response, request: Request, token_service: ITokenService = Depends(get_token_service)):
+async def refresh(
+    response: Response, 
+    request: Request, 
+    token_service: ITokenService = Depends(get_token_service),
+    _: None = Depends(verify_csrf_token_only)
+):
     refresh_token = request.cookies.get(REFRESH_TOKEN_COOKIE)
 
     if not refresh_token:
@@ -116,28 +113,6 @@ async def refresh(response: Response, request: Request, token_service: ITokenSer
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    response.set_cookie(ACCESS_TOKEN_COOKIE, new_access_token, max_age=ACCESS_TOKEN_MAX_AGE, **COOKIE_CONFIG)
-    response.set_cookie(CSRF_TOKEN_COOKIE, new_csrf_token, max_age=CSRF_TOKEN_MAX_AGE, **CSRF_COOKIE_CONFIG)
-    return {
-        "success": True,
-        "message": MSG_TOKEN_REFRESHED
-    }
-
-@router.get("/me", response_model=dict)
-async def get_me(current_user: User = Depends(get_current_active_user)):
-    return {
-        "success": True,
-        "data": {
-            "user": {
-                "id": str(current_user.id),
-                "email": current_user.email,
-                "first_name": current_user.first_name,
-                "last_name": current_user.last_name,
-                "role": current_user.role,
-                "is_active": current_user.is_active,
-                "location": current_user.location,
-                "phone": current_user.phone,
-                "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
-            }
-        }
-    }
+    response.set_cookie(ACCESS_TOKEN_COOKIE, new_access_token, max_age=ACCESS_TOKEN_MAX_AGE, **get_cookie_config())
+    response.set_cookie(CSRF_TOKEN_COOKIE, new_csrf_token, max_age=CSRF_TOKEN_MAX_AGE, **get_csrf_cookie_config())
+    return APIResponse.ok(message=MSG_TOKEN_REFRESHED)

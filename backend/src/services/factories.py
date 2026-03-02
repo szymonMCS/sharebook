@@ -8,8 +8,10 @@ from src.services.interfaces import (
     ITokenService,
     IPasswordService,
     IBookCatalogService,
-    IUserLibraryService,
+    ILibraryManagementService,
+    ICommunityBookService,
     IBookImportService,
+    IBookMetadataProvider,
 )
 from database.repositories.user_repository import UserRepository
 from database.repositories.book_repository import BookRepository
@@ -20,7 +22,8 @@ from src.services.registration_service import RegistrationService
 from src.services.token_service import TokenService
 from src.services.password_service import PasswordService
 from src.services.book_catalog_service import BookCatalogService
-from src.services.user_library_service import UserLibraryService
+from src.services.library_management_service import LibraryManagementService
+from src.services.community_book_service import CommunityBookService
 from src.services.book_import_service import BookImportService
 from src.services.google_books_provider import GoogleBooksProvider
 
@@ -42,12 +45,17 @@ class RepositoryFactory(IRepositoryFactory):
 
 class ServiceFactory(IServiceFactory):
 
-    def __init__(self, db: AsyncSession = None, repo_factory: IRepositoryFactory = None):
+    def __init__(
+        self, 
+        db: AsyncSession = None, 
+        repo_factory: IRepositoryFactory = None,
+        metadata_provider: IBookMetadataProvider = None
+    ):
         self._db = db
         self._repo_factory = repo_factory or (RepositoryFactory(db) if db else None)
         
         self._password_service: IPasswordService = None
-        self._google_books_provider = None
+        self._metadata_provider = metadata_provider
 
     def create_password_service(self) -> IPasswordService:
         if not self._password_service:
@@ -81,18 +89,23 @@ class ServiceFactory(IServiceFactory):
             book_repo=self._repo_factory.create_book_repository()
         )
 
-    def create_user_library_service(self) -> IUserLibraryService:
-        return UserLibraryService(
+    def create_library_management_service(self) -> ILibraryManagementService:
+        return LibraryManagementService(
+            user_book_repo=self._repo_factory.create_user_book_repository(),
+            book_repo=self._repo_factory.create_book_repository()
+        )
+
+    def create_community_book_service(self) -> ICommunityBookService:
+        return CommunityBookService(
             user_book_repo=self._repo_factory.create_user_book_repository(),
             book_repo=self._repo_factory.create_book_repository(),
             user_repo=self._repo_factory.create_user_repository()
         )
 
     def create_book_import_service(self) -> IBookImportService:
-        if not self._google_books_provider:
-            self._google_books_provider = GoogleBooksProvider()
+        provider = self._metadata_provider or GoogleBooksProvider()
         
         return BookImportService(
             book_repo=self._repo_factory.create_book_repository(),
-            metadata_provider=self._google_books_provider
+            metadata_provider=provider
         )

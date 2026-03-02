@@ -67,7 +67,7 @@ class UpdateStatusRequest(BaseModel):
     def validate_status(cls, v: str) -> str:
         valid_statuses = ['available', 'reserved', 'borrowed', 'unavailable', 'lent']
         if v not in valid_statuses:
-            raise ValueError(f'Invalid status. Must be one of: {', '.join(valid_statuses)}')
+            raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
         return v
 
 
@@ -129,7 +129,6 @@ class CommunityBookResponse(BookBase):
 
 
 class BookCondition:
-    """Valid book conditions."""
     NEW = "new"
     GOOD = "good"
     FAIR = "fair"
@@ -138,12 +137,7 @@ class BookCondition:
     ALL = [NEW, GOOD, FAIR, POOR]
 
 
-class AddBookToLibraryRequest(BaseModel):
-    """Request to add book to user's library.
-    
-    Only ISBN and condition required. Multiple copies allowed.
-    """
-    
+class AddBookToLibraryRequest(BaseModel):   
     model_config = ConfigDict(populate_by_name=True)
     
     isbn: str = Field(..., min_length=10, max_length=17, description="ISBN-10 or ISBN-13")
@@ -161,5 +155,25 @@ class AddBookToLibraryRequest(BaseModel):
     @classmethod
     def validate_condition(cls, v: str) -> str:
         if v not in BookCondition.ALL:
-            raise ValueError(f'Invalid condition. Must be one of: {', '.join(BookCondition.ALL)}')
+            raise ValueError(f"Invalid condition. Must be one of: {', '.join(BookCondition.ALL)}")
+        return v
+
+
+class CommunityBooksFilter(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    
+    status: Optional[str] = Field(None, description="Filter by status: available, reserved, borrowed, lent")
+    search: Optional[str] = Field(None, description="Search in title, author")
+    author: Optional[str] = Field(None, description="Filter by author")
+    page: int = Field(1, ge=1, description="Page number")
+    per_page: int = Field(20, ge=1, le=100, description="Items per page")
+    
+    @field_validator('status')
+    @classmethod
+    def validate_status(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        valid_statuses = ['available', 'reserved', 'borrowed', 'lent', 'all']
+        if v not in valid_statuses:
+            raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
         return v

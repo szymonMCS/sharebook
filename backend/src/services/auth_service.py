@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 from src.services.interfaces import IAuthService, IPasswordService
-from database.repositories.interfaces import IUserRepository
+from database.interfaces import IUserRepository
 from src.schemas.user import UserResponse
 
 logger = logging.getLogger(__name__)

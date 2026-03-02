@@ -3,18 +3,23 @@ from uuid import UUID
 from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from src.api.deps import (
-    get_user_library_service,
+    get_library_management_service,
+    get_community_book_service,
     get_book_import_service,
     get_current_active_user,
     get_current_user_optional
 )
-from src.services.interfaces import IUserLibraryService, IBookImportService
+from src.services.interfaces import (
+    ILibraryManagementService,
+    ICommunityBookService,
+    IBookImportService
+)
 from src.schemas.book import (
     AddBookToLibraryRequest,
-    BookUpdate,
     UserBookResponse,
     UpdateLendableRequest,
-    UpdateStatusRequest
+    UpdateStatusRequest,
+    CommunityBooksFilter
 )
 from src.core.exceptions import ShareBookException
 from database.models import User
@@ -27,7 +32,7 @@ router = APIRouter(prefix="/library", tags=["library"])
 async def get_my_library(
     skip: int = 0,
     limit: int = 100,
-    library_service: IUserLibraryService = Depends(get_user_library_service),
+    library_service: ILibraryManagementService = Depends(get_library_management_service),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
@@ -53,7 +58,7 @@ async def get_my_library(
 @router.get("/my-books/{user_book_id}", response_model=dict)
 async def get_my_book(
     user_book_id: UUID,
-    library_service: IUserLibraryService = Depends(get_user_library_service),
+    library_service: ILibraryManagementService = Depends(get_library_management_service),
     current_user: User = Depends(get_current_active_user)
 ):
     book = await library_service.get_library_item(
@@ -77,7 +82,7 @@ async def get_my_book(
 async def add_book_to_library(
     request: AddBookToLibraryRequest,
     background_tasks: BackgroundTasks,
-    library_service: IUserLibraryService = Depends(get_user_library_service),
+    library_service: ILibraryManagementService = Depends(get_library_management_service),
     import_service: IBookImportService = Depends(get_book_import_service),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -114,7 +119,7 @@ async def add_book_to_library(
 async def update_lendable_status(
     user_book_id: UUID,
     update_data: UpdateLendableRequest,
-    library_service: IUserLibraryService = Depends(get_user_library_service),
+    library_service: ILibraryManagementService = Depends(get_library_management_service),
     current_user: User = Depends(get_current_active_user)
 ):
     
@@ -145,7 +150,7 @@ async def update_lendable_status(
 async def update_book_status(
     user_book_id: UUID,
     status_update: UpdateStatusRequest,
-    library_service: IUserLibraryService = Depends(get_user_library_service),
+    library_service: ILibraryManagementService = Depends(get_library_management_service),
     current_user: User = Depends(get_current_active_user)
 ):
     
@@ -158,7 +163,7 @@ async def update_book_status(
         
         return {
             "success": True,
-            "message": f"Status updated to: {new_status}",
+            "message": f"Status updated to: {status_update.status}",
             "data": result
         }
         
@@ -177,7 +182,7 @@ async def update_book_status(
 @router.delete("/my-books/{user_book_id}", response_model=dict)
 async def remove_from_library(
     user_book_id: UUID,
-    library_service: IUserLibraryService = Depends(get_user_library_service),
+    library_service: ILibraryManagementService = Depends(get_library_management_service),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
@@ -217,32 +222,27 @@ async def remove_from_library(
 
 @router.get("/community", response_model=dict)
 async def get_community_books(
-    status: Optional[str] = Query(None, description="Filter by status: available, reserved, borrowed"),
-    search: Optional[str] = Query(None, description="Search in title, author"),
-    author: Optional[str] = Query(None, description="Filter by author"),
-    page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
-    library_service: IUserLibraryService = Depends(get_user_library_service),
+    filters: CommunityBooksFilter = Depends(),
+    community_service: ICommunityBookService = Depends(get_community_book_service),
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    skip = (page - 1) * per_page
+    skip = (filters.page - 1) * filters.per_page
     
-    books, total = await library_service.get_community_books(
+    books, total = await community_service.get_community_books(
         exclude_user_id=current_user.id if current_user else None,
-        status=status,
-        search=search,
-        author=author,
+        status=filters.status,
+        search=filters.search,
+        author=filters.author,
         skip=skip,
-        limit=per_page
+        limit=filters.per_page
     )
+    
+    from src.core.response import create_pagination_meta
     
     return {
         "success": True,
         "data": books,
-        "pagination": {
-            "page": page,
-            "per_page": per_page,
-            "total": total,
-            "total_pages": (total + per_page - 1) // per_page
+        "meta": {
+            "pagination": create_pagination_meta(filters.page, filters.per_page, total)
         }
     }
