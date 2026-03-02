@@ -4,6 +4,8 @@ from database.config import AsyncSessionLocal
 from database.repositories.user_repository import UserRepository
 from database.repositories.book_repository import BookRepository
 from database.repositories.user_book_repository import UserBookRepository
+from database.repositories.loan_repository import LoanRepository
+from database.repositories.loan_request_repository import LoanRequestRepository
 
 
 class UnitOfWork:
@@ -15,6 +17,8 @@ class UnitOfWork:
         self._users: Optional[UserRepository] = None
         self._books: Optional[BookRepository] = None
         self._user_books: Optional[UserBookRepository] = None
+        self._loans: Optional[LoanRepository] = None
+        self._loan_requests: Optional[LoanRequestRepository] = None
 
     async def __aenter__(self) -> "UnitOfWork":
         if self._own_session:
@@ -62,6 +66,18 @@ class UnitOfWork:
         if self._user_books is None:
             self._user_books = UserBookRepository(self.session)
         return self._user_books
+
+    @property
+    def loans(self) -> LoanRepository:
+        if self._loans is None:
+            self._loans = LoanRepository(self.session)
+        return self._loans
+
+    @property
+    def loan_requests(self) -> LoanRequestRepository:
+        if self._loan_requests is None:
+            self._loan_requests = LoanRequestRepository(self.session)
+        return self._loan_requests
 
     async def commit(self) -> None:
         if self._session:
