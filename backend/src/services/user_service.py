@@ -2,7 +2,7 @@ import logging
 from uuid import UUID
 from typing import Optional
 from src.services.interfaces import IUserService
-from database.repositories.interfaces import IUserRepository
+from database.interfaces import IUserRepository
 from src.schemas.user import UserUpdate, UserResponse, UserProfileResponse
 from src.core.exceptions import UserNotFoundException
 

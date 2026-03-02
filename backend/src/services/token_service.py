@@ -8,7 +8,7 @@ from src.core.security import (
     generate_csrf_token,
 )
 from src.core.exceptions import RefreshTokenInvalidException, UserNotFoundException
-from database.repositories.interfaces import IUserRepository
+from database.interfaces import IUserRepository
 
 
 class TokenService(ITokenService):

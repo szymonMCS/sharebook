@@ -1,16 +1,26 @@
 from typing import Any, Optional
 
 
-class ShareBookException(Exception):
+class ShareBookException(Exception):  
+    status_code: int = 400 
 
-    def __init__(self, message: str, code: Optional[str] = None, details: Optional[dict] = None):
+    def __init__(
+        self, 
+        message: str, 
+        code: Optional[str] = None, 
+        details: Optional[dict] = None,
+        status_code: Optional[int] = None
+    ):
         self.message = message
         self.code = code or self.__class__.__name__
         self.details = details or {}
+        if status_code:
+            self.status_code = status_code
         super().__init__(self.message)
 
 
 class DuplicateEmailException(ShareBookException):
+    status_code = 409
 
     def __init__(self, email: str):
         super().__init__(
@@ -21,6 +31,7 @@ class DuplicateEmailException(ShareBookException):
 
 
 class InvalidCredentialsException(ShareBookException):
+    status_code = 401
 
     def __init__(self):
         super().__init__(
@@ -30,6 +41,7 @@ class InvalidCredentialsException(ShareBookException):
 
 
 class UserNotFoundException(ShareBookException):
+    status_code = 404
 
     def __init__(self, user_id: Any = None):
         details = {}
@@ -46,6 +58,7 @@ class UserNotFoundException(ShareBookException):
         )
 
 class RefreshTokenInvalidException(ShareBookException):
+    status_code = 401
 
     def __init__(self):
         super().__init__(
@@ -54,7 +67,8 @@ class RefreshTokenInvalidException(ShareBookException):
         )
 
 class PasswordTooWeakException(ShareBookException):
-    
+    status_code = 400
+
     def __init__(self, reason: str):
         super().__init__(
             message=f"Password too weak: {reason}",
@@ -64,7 +78,8 @@ class PasswordTooWeakException(ShareBookException):
 
 
 class BookNotFoundException(ShareBookException):
-    
+    status_code = 404
+
     def __init__(self, book_id: Any = None):
         details = {}
         if book_id:
@@ -81,7 +96,8 @@ class BookNotFoundException(ShareBookException):
 
 
 class DuplicateISBNException(ShareBookException):
-    
+    status_code = 409
+
     def __init__(self, isbn: str):
         super().__init__(
             message=f"Book with ISBN '{isbn}' already exists",
@@ -91,7 +107,8 @@ class DuplicateISBNException(ShareBookException):
 
 
 class NotBookOwnerException(ShareBookException):
-    
+    status_code = 403
+
     def __init__(self):
         super().__init__(
             message="You are not the owner of this book",

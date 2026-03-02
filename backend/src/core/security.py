@@ -12,6 +12,23 @@ from src.core.constants import (
 )
 
 
+def get_cookie_secure() -> bool:
+    return not settings.DEBUG
+
+def get_cookie_config() -> dict[str, Any]:
+    return {
+        "httponly": True,
+        "secure": get_cookie_secure(),
+        "samesite": "lax",
+    }
+
+def get_csrf_cookie_config() -> dict[str, Any]:
+    return {
+        "httponly": False,
+        "secure": get_cookie_secure(),
+        "samesite": "lax",
+    }
+
 def _to_bytes(text: str) -> bytes:
     return text.encode('utf-8')[:72]
 

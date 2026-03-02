@@ -4,9 +4,10 @@ from .registration_service import RegistrationService
 from .token_service import TokenService
 from .password_service import PasswordService
 from .book_catalog_service import BookCatalogService
-from .user_library_service import UserLibraryService
+from .library_management_service import LibraryManagementService
+from .community_book_service import CommunityBookService
 from .book_import_service import BookImportService
-from .google_books_provider import GoogleBooksProvider, MockBookMetadataProvider
+from .google_books_provider import GoogleBooksProvider, GoogleBooksProviderFactory, MockBookMetadataProvider
 from .factories import ServiceFactory, RepositoryFactory
 
 __all__ = [
@@ -16,9 +17,11 @@ __all__ = [
     "TokenService",
     "PasswordService",
     "BookCatalogService",
-    "UserLibraryService",
+    "LibraryManagementService",
+    "CommunityBookService",
     "BookImportService",
     "GoogleBooksProvider",
+    "GoogleBooksProviderFactory",
     "MockBookMetadataProvider",
     "ServiceFactory",
     "RepositoryFactory",

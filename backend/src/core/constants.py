@@ -47,14 +47,3 @@ MSG_LOGOUT_SUCCESS = "Logout successful"
 MSG_REGISTER_SUCCESS = "User registered successfully"
 MSG_TOKEN_REFRESHED = "Token refreshed successfully"
 
-COOKIE_CONFIG = {
-    "httponly": True,
-    "secure": False,
-    "samesite": "lax",
-}
-
-CSRF_COOKIE_CONFIG = {
-    "httponly": False,
-    "secure": False,
-    "samesite": "lax",
-}
