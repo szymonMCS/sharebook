@@ -114,3 +114,31 @@ class NotBookOwnerException(ShareBookException):
             message="You are not the owner of this book",
             code="NOT_BOOK_OWNER"
         )
+
+
+class NotAuthorizedException(ShareBookException):
+    status_code = 403
+
+    def __init__(self, message: str = "Action not authorized"):
+        super().__init__(
+            message=message,
+            code="NOT_AUTHORIZED"
+        )
+
+
+class LoanRequestNotFoundException(ShareBookException):
+    status_code = 404
+
+    def __init__(self, request_id: Any = None):
+        details = {}
+        if request_id:
+            message = f"Loan request with id '{request_id}' not found"
+            details["request_id"] = str(request_id)
+        else:
+            message = "Loan request not found"
+
+        super().__init__(
+            message=message,
+            code="LOAN_REQUEST_NOT_FOUND",
+            details=details
+        )

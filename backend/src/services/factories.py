@@ -12,10 +12,14 @@ from src.services.interfaces import (
     ICommunityBookService,
     IBookImportService,
     IBookMetadataProvider,
+    ILoanService,
+    ILoanRequestService,
 )
 from database.repositories.user_repository import UserRepository
 from database.repositories.book_repository import BookRepository
 from database.repositories.user_book_repository import UserBookRepository
+from database.repositories.loan_repository import LoanRepository
+from database.repositories.loan_request_repository import LoanRequestRepository
 from src.services.auth_service import AuthService
 from src.services.user_service import UserService
 from src.services.registration_service import RegistrationService
@@ -25,6 +29,8 @@ from src.services.book_catalog_service import BookCatalogService
 from src.services.library_management_service import LibraryManagementService
 from src.services.community_book_service import CommunityBookService
 from src.services.book_import_service import BookImportService
+from src.services.loan_service import LoanService
+from src.services.loan_request_service import LoanRequestService
 from src.services.google_books_provider import GoogleBooksProvider
 
 
@@ -41,6 +47,12 @@ class RepositoryFactory(IRepositoryFactory):
 
     def create_user_book_repository(self):
         return UserBookRepository(self._db)
+
+    def create_loan_repository(self):
+        return LoanRepository(self._db)
+
+    def create_loan_request_repository(self):
+        return LoanRequestRepository(self._db)
 
 
 class ServiceFactory(IServiceFactory):
@@ -108,4 +120,16 @@ class ServiceFactory(IServiceFactory):
         return BookImportService(
             book_repo=self._repo_factory.create_book_repository(),
             metadata_provider=provider
+        )
+
+    def create_loan_service(self) -> ILoanService:
+        return LoanService(
+            loan_repo=self._repo_factory.create_loan_repository()
+        )
+
+    def create_loan_request_service(self) -> ILoanRequestService:
+        return LoanRequestService(
+            request_repo=self._repo_factory.create_loan_request_repository(),
+            loan_repo=self._repo_factory.create_loan_repository(),
+            user_book_repo=self._repo_factory.create_user_book_repository()
         )
