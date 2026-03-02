@@ -7,6 +7,8 @@ from .book_catalog_service import BookCatalogService
 from .library_management_service import LibraryManagementService
 from .community_book_service import CommunityBookService
 from .book_import_service import BookImportService
+from .loan_service import LoanService
+from .loan_request_service import LoanRequestService
 from .google_books_provider import GoogleBooksProvider, GoogleBooksProviderFactory, MockBookMetadataProvider
 from .factories import ServiceFactory, RepositoryFactory
 
@@ -20,6 +22,8 @@ __all__ = [
     "LibraryManagementService",
     "CommunityBookService",
     "BookImportService",
+    "LoanService",
+    "LoanRequestService",
     "GoogleBooksProvider",
     "GoogleBooksProviderFactory",
     "MockBookMetadataProvider",

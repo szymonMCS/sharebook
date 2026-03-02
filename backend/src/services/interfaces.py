@@ -167,6 +167,8 @@ BookCreate = "BookCreate"
 BookUpdate = "BookUpdate"
 UserBookResponse = "UserBookResponse"
 CommunityBookResponse = "CommunityBookResponse"
+LoanResponse = "LoanResponse"
+LoanRequestResponse = "LoanRequestResponse"
 
 
 class IRepositoryFactory(ABC):
@@ -178,6 +180,63 @@ class IRepositoryFactory(ABC):
         pass
     @abstractmethod
     def create_user_book_repository(self) -> "IUserBookRepository":
+        pass
+    @abstractmethod
+    def create_loan_repository(self) -> "ILoanRepository":
+        pass
+    @abstractmethod
+    def create_loan_request_repository(self) -> "ILoanRequestRepository":
+        pass
+
+
+class ILoanService(ABC):
+    @abstractmethod
+    async def create_loan(self, user_book_id: UUID, borrower_id: UUID, lender_id: UUID) -> "LoanResponse":
+        pass
+    @abstractmethod
+    async def return_book(self, loan_id: UUID, user_id: UUID) -> "LoanResponse":
+        pass
+    @abstractmethod
+    async def get_borrowed_books(self, borrower_id: UUID, status: Optional[str] = None) -> List["LoanResponse"]:
+        pass
+    @abstractmethod
+    async def get_lent_books(self, lender_id: UUID, status: Optional[str] = None) -> List["LoanResponse"]:
+        pass
+    @abstractmethod
+    async def can_borrow_more(self, borrower_id: UUID) -> bool:
+        pass
+    @abstractmethod
+    async def get_loan_by_id(self, loan_id: UUID) -> Optional["LoanResponse"]:
+        pass
+    @abstractmethod
+    async def count_active_loans(self, borrower_id: UUID) -> int:
+        pass
+
+
+class ILoanRequestService(ABC):
+    @abstractmethod
+    async def create_request(self, user_book_id: UUID, requester_id: UUID, message: Optional[str] = None) -> "LoanRequestResponse":
+        pass
+    @abstractmethod
+    async def accept_request(self, request_id: UUID, owner_id: UUID) -> "LoanRequestResponse":
+        pass
+    @abstractmethod
+    async def reject_request(self, request_id: UUID, owner_id: UUID, reason: Optional[str] = None) -> "LoanRequestResponse":
+        pass
+    @abstractmethod
+    async def cancel_request(self, request_id: UUID, requester_id: UUID) -> bool:
+        pass
+    @abstractmethod
+    async def get_incoming_requests(self, owner_id: UUID, status: Optional[str] = "pending") -> List["LoanRequestResponse"]:
+        pass
+    @abstractmethod
+    async def get_outgoing_requests(self,requester_id: UUID, status: Optional[str] = None) -> List["LoanRequestResponse"]:
+        pass
+    @abstractmethod
+    async def get_request_details(self, request_id: UUID) -> Optional["LoanRequestResponse"]:
+        pass
+    @abstractmethod
+    async def get_summary(self, user_id: UUID) -> dict:
         pass
 
 
@@ -205,4 +264,10 @@ class IServiceFactory(ABC):
         pass
     @abstractmethod
     def create_book_import_service(self) -> IBookImportService:
+        pass
+    @abstractmethod
+    def create_loan_service(self) -> ILoanService:
+        pass
+    @abstractmethod
+    def create_loan_request_service(self) -> ILoanRequestService:
         pass

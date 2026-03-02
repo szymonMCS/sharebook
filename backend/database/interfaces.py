@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from uuid import UUID
 from typing import TypeVar, Generic, Optional, List, TYPE_CHECKING
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime
 
 if TYPE_CHECKING:
     from database.models import User, Book, UserBook, Loan, LoanRequest
