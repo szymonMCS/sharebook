@@ -4,10 +4,19 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from src.api.deps import (
     get_loan_request_service,
+    get_loan_service,
+    get_library_management_service,
+    get_message_service,
     get_current_active_user,
     verify_csrf_protection
 )
-from src.services.interfaces import ILoanRequestService
+from src.services.interfaces import (
+    ILoanRequestService,
+    ILoanService,
+    ILibraryManagementService,
+    IMessageService,
+)
+from src.services.sagas.loan_acceptance_saga import LoanAcceptanceSaga
 from src.schemas.loan import (
     LoanRequestCreate,
     LoanRequestResponse,
@@ -163,13 +172,31 @@ async def get_request_details(
 async def accept_loan_request(
     request_id: UUID,
     loan_request_service: ILoanRequestService = Depends(get_loan_request_service),
+    loan_service: ILoanService = Depends(get_loan_service),
+    library_service: ILibraryManagementService = Depends(get_library_management_service),
+    message_service: IMessageService = Depends(get_message_service),
     current_user: User = Depends(verify_csrf_protection)
 ):
     try:
-        request = await loan_request_service.accept_request(
+        saga = LoanAcceptanceSaga(
+            loan_request_service=loan_request_service,
+            loan_service=loan_service,
+            library_service=library_service,
+            message_service=message_service,
+        )
+        
+        result = await saga.execute(
             request_id=request_id,
             owner_id=current_user.id
         )
+        
+        if not result.success:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=result.error_message
+            )
+        
+        request = await loan_request_service.get_request_details(request_id)
 
         return LoanRequestActionResponse(
             success=True,

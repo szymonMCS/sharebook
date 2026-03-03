@@ -5,6 +5,8 @@ from fastapi.security import HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.config import get_async_session
 from database.models import User
+from database.interfaces import IUnitOfWork
+from database.unit_of_work import UnitOfWork
 from database.repositories.user_repository import UserRepository
 from src.core.constants import (
     ACCESS_TOKEN_COOKIE,
@@ -31,6 +33,7 @@ from src.services.interfaces import (
     IBookImportService,
     ILoanService,
     ILoanRequestService,
+    IMessageService,
 )
 from src.services.factories import ServiceFactory, RepositoryFactory
 
@@ -48,6 +51,10 @@ def get_repository_factory():
 
 def get_service_factory(db: AsyncSession = Depends(get_db)) -> ServiceFactory:
     return ServiceFactory(db=db)
+
+async def get_unit_of_work() -> AsyncGenerator[IUnitOfWork, None]:
+    async with UnitOfWork() as uow:
+        yield uow
 
 def get_auth_service(factory: ServiceFactory = Depends(get_service_factory)) -> IAuthService:
     return factory.create_auth_service()
@@ -78,6 +85,9 @@ def get_loan_service(factory: ServiceFactory = Depends(get_service_factory)) -> 
 
 def get_loan_request_service(factory: ServiceFactory = Depends(get_service_factory)) -> ILoanRequestService:
     return factory.create_loan_request_service()
+
+def get_message_service(factory: ServiceFactory = Depends(get_service_factory)) -> IMessageService:
+    return factory.create_message_service()
 
 async def extract_token_from_request(request: Request) -> Optional[str]:
     return request.cookies.get(ACCESS_TOKEN_COOKIE)

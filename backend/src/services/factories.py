@@ -14,12 +14,14 @@ from src.services.interfaces import (
     IBookMetadataProvider,
     ILoanService,
     ILoanRequestService,
+    IMessageService,
 )
 from database.repositories.user_repository import UserRepository
 from database.repositories.book_repository import BookRepository
 from database.repositories.user_book_repository import UserBookRepository
 from database.repositories.loan_repository import LoanRepository
 from database.repositories.loan_request_repository import LoanRequestRepository
+from database.repositories.message_repository import MessageRepository
 from src.services.auth_service import AuthService
 from src.services.user_service import UserService
 from src.services.registration_service import RegistrationService
@@ -31,6 +33,7 @@ from src.services.community_book_service import CommunityBookService
 from src.services.book_import_service import BookImportService
 from src.services.loan_service import LoanService
 from src.services.loan_request_service import LoanRequestService
+from src.services.message_service import MessageService
 from src.services.google_books_provider import GoogleBooksProvider
 
 
@@ -53,6 +56,9 @@ class RepositoryFactory(IRepositoryFactory):
 
     def create_loan_request_repository(self):
         return LoanRequestRepository(self._db)
+
+    def create_message_repository(self):
+        return MessageRepository(self._db)
 
 
 class ServiceFactory(IServiceFactory):
@@ -128,8 +134,17 @@ class ServiceFactory(IServiceFactory):
         )
 
     def create_loan_request_service(self) -> ILoanRequestService:
+        message_service = self.create_message_service()
         return LoanRequestService(
             request_repo=self._repo_factory.create_loan_request_repository(),
             loan_repo=self._repo_factory.create_loan_repository(),
+            user_book_repo=self._repo_factory.create_user_book_repository(),
+            message_service=message_service
+        )
+
+    def create_message_service(self) -> IMessageService:
+        return MessageService(
+            message_repo=self._repo_factory.create_message_repository(),
+            request_repo=self._repo_factory.create_loan_request_repository(),
             user_book_repo=self._repo_factory.create_user_book_repository()
         )

@@ -10,10 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class LoanService(ILoanService):
-
-    MAX_ACTIVE_LOANS = 5
-    LOAN_DURATION_DAYS = 14
-
     def __init__(self, loan_repo: ILoanRepository):
         self._loan_repo = loan_repo
 

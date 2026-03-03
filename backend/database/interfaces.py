@@ -4,7 +4,7 @@ from typing import TypeVar, Generic, Optional, List, TYPE_CHECKING
 from sqlalchemy.ext.asyncio import AsyncSession
 
 if TYPE_CHECKING:
-    from database.models import User, Book, UserBook, Loan, LoanRequest
+    from database.models import User, Book, UserBook, Loan, LoanRequest, Message
 
 
 T = TypeVar("T")
@@ -189,4 +189,80 @@ class ILoanRequestRepository(ABC):
         pass
     @abstractmethod
     async def count_pending_for_requester(self, requester_id: UUID) -> int:
+        pass
+
+
+class IMessageRepository(ABC):
+    @abstractmethod
+    async def create(
+        self,
+        loan_request_id: UUID,
+        sender_id: UUID,
+        content: str,
+        message_type: str = "text"
+    ) -> "Message":
+        pass
+    @abstractmethod
+    async def get_by_id(self, message_id: UUID) -> Optional["Message"]:
+        pass
+    @abstractmethod
+    async def get_by_loan_request(self, loan_request_id: UUID, include_sender: bool = True) -> List["Message"]:
+        pass
+    @abstractmethod
+    async def get_unread_count(self, loan_request_id: UUID, user_id: UUID) -> int:
+        pass
+    @abstractmethod
+    async def mark_as_read(self, message_id: UUID) -> bool:
+        pass
+    @abstractmethod
+    async def mark_all_as_read(self, loan_request_id: UUID, user_id: UUID) -> int:
+        pass
+    @abstractmethod
+    async def create_system_message(self, loan_request_id: UUID, content: str) -> "Message":
+        pass
+
+
+class IUnitOfWork(ABC):
+    @property
+    @abstractmethod
+    def session(self) -> AsyncSession:
+        pass
+    @property
+    @abstractmethod
+    def users(self) -> "IUserRepository":
+        pass
+    @property
+    @abstractmethod
+    def books(self) -> "IBookRepository":
+        pass
+    @property
+    @abstractmethod
+    def user_books(self) -> "IUserBookRepository":
+        pass
+    @property
+    @abstractmethod
+    def loans(self) -> "ILoanRepository":
+        pass
+    @property
+    @abstractmethod
+    def loan_requests(self) -> "ILoanRequestRepository":
+        pass
+    @property
+    @abstractmethod
+    def messages(self) -> "IMessageRepository":
+        pass
+    @abstractmethod
+    async def __aenter__(self) -> "IUnitOfWork":
+        pass
+    @abstractmethod
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> bool:
+        pass
+    @abstractmethod
+    async def commit(self) -> None:
+        pass
+    @abstractmethod
+    async def rollback(self) -> None:
+        pass
+    @abstractmethod
+    async def flush(self) -> None:
         pass

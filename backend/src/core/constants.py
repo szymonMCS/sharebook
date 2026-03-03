@@ -1,6 +1,8 @@
 from datetime import timedelta
 from src.config import settings
 
+# BEZPIECZEŃSTWO - Tokeny i cookies
+
 ACCESS_TOKEN_COOKIE = "access_token"
 REFRESH_TOKEN_COOKIE = "refresh_token"
 CSRF_TOKEN_COOKIE = "XSRF-TOKEN"
@@ -18,12 +20,48 @@ REFRESH_TOKEN_EXPIRE_DELTA = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
 CSRF_HEADER_NAME = "X-XSRF-TOKEN"
 WWW_AUTHENTICATE_HEADER = "Bearer"
 
+# ROLE UŻYTKOWNIKÓW
+
 ROLE_READER = "reader"
 ROLE_ADMIN = "admin"
+
+# BEZPIECZEŃSTWO - Hasła
 
 BCRYPT_ROUNDS = 12
 PASSWORD_MIN_LENGTH = 8
 PASSWORD_MAX_BYTES = 72 
+
+# WYPOŻYCZENIA - Limity i czasy trwania
+
+MAX_ACTIVE_LOANS = 5
+
+LOAN_DURATION_DAYS = 14
+
+# PAGINACJA - Domyślne wartości
+
+DEFAULT_PAGE_SIZE = 20
+MAX_PAGE_SIZE = 100
+
+# STATUSY - Dostępne wartości dla encji
+
+LOAN_STATUSES = ["active", "returned", "overdue"]
+LOAN_REQUEST_STATUSES = ["pending", "accepted", "rejected", "cancelled"]
+USER_BOOK_STATUSES = ["available", "reserved", "borrowed", "unavailable", "lent"]
+BOOK_CONDITIONS = ["new", "good", "fair", "poor"]
+MESSAGE_TYPES = ["text", "system"]
+
+# IMPORTY - Walidacja ISBN
+
+ISBN_MIN_LENGTH = 10
+ISBN_MAX_LENGTH = 17
+
+# WIADOMOŚCI - Ograniczenia
+
+MESSAGE_MAX_LENGTH = 2000
+MESSAGE_MIN_LENGTH = 1
+LOAN_REQUEST_MESSAGE_MAX_LENGTH = 1000
+
+# HTTP STATUS KODY
 
 HTTP_200_OK = 200
 HTTP_201_CREATED = 201
@@ -36,14 +74,18 @@ HTTP_409_CONFLICT = 409
 HTTP_422_UNPROCESSABLE_ENTITY = 422
 HTTP_500_INTERNAL_SERVER_ERROR = 500
 
+# KOMUNIKATY BŁĘDÓW
+
 ERROR_CSRF_TOKEN_INVALID = "Invalid CSRF token"
 ERROR_CSRF_TOKEN_MISSING = "CSRF token missing"
 ERROR_INACTIVE_USER = "User account is inactive"
 ERROR_INVALID_TOKEN = "Invalid authentication token"
 ERROR_MISSING_TOKEN = "Authentication token missing"
 ERROR_INVALID_CREDENTIALS = "Invalid email or password"
+
+# KOMUNIKATY SUKCESU
+
 MSG_LOGIN_SUCCESS = "Login successful"
 MSG_LOGOUT_SUCCESS = "Logout successful"
 MSG_REGISTER_SUCCESS = "User registered successfully"
 MSG_TOKEN_REFRESHED = "Token refreshed successfully"
-

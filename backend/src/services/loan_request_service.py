@@ -6,8 +6,8 @@ from database.interfaces import (
     ILoanRepository,
     IUserBookRepository,
 )
-from src.services.interfaces import ILoanRequestService
-from src.services.loan_service import LoanService
+from src.services.interfaces import ILoanRequestService, IMessageService
+from src.core.constants import MAX_ACTIVE_LOANS
 from src.core.exceptions import (
     BookNotFoundException,
     NotAuthorizedException,
@@ -23,11 +23,13 @@ class LoanRequestService(ILoanRequestService):
         self,
         request_repo: ILoanRequestRepository,
         loan_repo: ILoanRepository,
-        user_book_repo: IUserBookRepository
+        user_book_repo: IUserBookRepository,
+        message_service: Optional[IMessageService] = None 
     ):
         self._request_repo = request_repo
         self._loan_repo = loan_repo
         self._user_book_repo = user_book_repo
+        self._message_service = message_service
 
     async def create_request(self, user_book_id: UUID, requester_id: UUID, message: Optional[str] = None) -> LoanRequest:
         user_book = await self._user_book_repo.get_by_id(user_book_id)
@@ -55,6 +57,15 @@ class LoanRequestService(ILoanRequestService):
             owner_id=owner_id,
             message=message,
         )
+        
+        if self._message_service:
+            try:
+                await self._message_service.add_system_message(
+                    request.id,
+                    "Prośba o wypożyczenie została utworzona."
+                )
+            except Exception as e:
+                logger.warning(f"Failed to create system message: {e}")
 
         logger.info(f"Created request: {request.id}")
         return request
@@ -70,13 +81,8 @@ class LoanRequestService(ILoanRequestService):
         if request.status != "pending":
             raise ValueError(f"Cannot accept - current status: {request.status}")
 
-        active_count = await self._loan_repo.count_active_for_borrower(request.requester_id)
-        if active_count >= LoanService.MAX_ACTIVE_LOANS:
-            raise ValueError("Requester has reached the maximum number of active loans")
-
         updated_request = await self._request_repo.update_status(request_id, "accepted")
-        await self._loan_repo.create(user_book_id=request.user_book_id, borrower_id=request.requester_id, lender_id=request.owner_id,)
-        await self._user_book_repo.update(request.user_book_id, status="borrowed")
+        
         logger.info(f"Accepted request: {request_id}")
         return updated_request
 
@@ -92,6 +98,15 @@ class LoanRequestService(ILoanRequestService):
             raise ValueError(f"Cannot reject - current status: {request.status}")
 
         updated_request = await self._request_repo.update_status(request_id, "rejected", reason)
+        
+        if self._message_service:
+            try:
+                content = "Właściciel odrzucił prośbę o wypożyczenie."
+                if reason:
+                    content += f" Powód: {reason}"
+                await self._message_service.add_system_message(request_id, content)
+            except Exception as e:
+                logger.warning(f"Failed to create system message: {e}")
 
         logger.info(f"Rejected request: {request_id}")
         return updated_request
@@ -108,6 +123,15 @@ class LoanRequestService(ILoanRequestService):
             raise ValueError(f"Cannot cancel - current status: {request.status}")
 
         await self._request_repo.update_status(request_id, "cancelled")
+        
+        if self._message_service:
+            try:
+                await self._message_service.add_system_message(
+                    request_id,
+                    "Prośba o wypożyczenie została anulowana przez proszącego."
+                )
+            except Exception as e:
+                logger.warning(f"Failed to create system message: {e}")
 
         logger.info(f"Cancelled request: {request_id}")
         return True
