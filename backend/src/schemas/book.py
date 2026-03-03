@@ -3,6 +3,11 @@ from datetime import datetime
 from uuid import UUID
 from typing import Optional, List
 import re
+from src.core.constants import (
+    USER_BOOK_STATUSES, BOOK_CONDITIONS, 
+    ISBN_MIN_LENGTH, ISBN_MAX_LENGTH,
+    DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
+)
 
 
 ISBN_PATTERN = re.compile(r'^(?:\d{9}[\dX]|\d{13})$')
@@ -65,9 +70,8 @@ class UpdateStatusRequest(BaseModel):
     @field_validator('status')
     @classmethod
     def validate_status(cls, v: str) -> str:
-        valid_statuses = ['available', 'reserved', 'borrowed', 'unavailable', 'lent']
-        if v not in valid_statuses:
-            raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+        if v not in USER_BOOK_STATUSES:
+            raise ValueError(f"Invalid status. Must be one of: {', '.join(USER_BOOK_STATUSES)}")
         return v
 
 
@@ -129,18 +133,18 @@ class CommunityBookResponse(BookBase):
 
 
 class BookCondition:
-    NEW = "new"
-    GOOD = "good"
-    FAIR = "fair"
-    POOR = "poor"
-    
-    ALL = [NEW, GOOD, FAIR, POOR]
+    """Dostępne stany książek - wrapper dla stałych."""
+    NEW = BOOK_CONDITIONS[0]
+    GOOD = BOOK_CONDITIONS[1]
+    FAIR = BOOK_CONDITIONS[2]
+    POOR = BOOK_CONDITIONS[3]
+    ALL = BOOK_CONDITIONS
 
 
 class AddBookToLibraryRequest(BaseModel):   
     model_config = ConfigDict(populate_by_name=True)
     
-    isbn: str = Field(..., min_length=10, max_length=17, description="ISBN-10 or ISBN-13")
+    isbn: str = Field(..., min_length=ISBN_MIN_LENGTH, max_length=ISBN_MAX_LENGTH, description="ISBN-10 or ISBN-13")
     condition: str = Field(..., description="Book condition: new, good, fair, poor")
     
     @field_validator('isbn')
@@ -154,8 +158,8 @@ class AddBookToLibraryRequest(BaseModel):
     @field_validator('condition')
     @classmethod
     def validate_condition(cls, v: str) -> str:
-        if v not in BookCondition.ALL:
-            raise ValueError(f"Invalid condition. Must be one of: {', '.join(BookCondition.ALL)}")
+        if v not in BOOK_CONDITIONS:
+            raise ValueError(f"Invalid condition. Must be one of: {', '.join(BOOK_CONDITIONS)}")
         return v
 
 
@@ -166,14 +170,15 @@ class CommunityBooksFilter(BaseModel):
     search: Optional[str] = Field(None, description="Search in title, author")
     author: Optional[str] = Field(None, description="Filter by author")
     page: int = Field(1, ge=1, description="Page number")
-    per_page: int = Field(20, ge=1, le=100, description="Items per page")
+    per_page: int = Field(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Items per page")
     
     @field_validator('status')
     @classmethod
     def validate_status(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
-        valid_statuses = ['available', 'reserved', 'borrowed', 'lent', 'all']
-        if v not in valid_statuses:
-            raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+        # 'all' jest specjalną wartością dla filtra, nie dla modelu
+        valid_filter_statuses = USER_BOOK_STATUSES + ['all']
+        if v not in valid_filter_statuses:
+            raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_filter_statuses)}")
         return v

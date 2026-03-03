@@ -1,16 +1,16 @@
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.config import AsyncSessionLocal
+from database.interfaces import IUnitOfWork
 from database.repositories.user_repository import UserRepository
 from database.repositories.book_repository import BookRepository
 from database.repositories.user_book_repository import UserBookRepository
 from database.repositories.loan_repository import LoanRepository
 from database.repositories.loan_request_repository import LoanRequestRepository
+from database.repositories.message_repository import MessageRepository
 
 
-class UnitOfWork:
-    """Pattern Unit of Work do zarządzania wyporzyczeniami i repozytoriami"""
-
+class UnitOfWork(IUnitOfWork):
     def __init__(self, session: Optional[AsyncSession] = None):
         self._session = session
         self._own_session = session is None
@@ -19,6 +19,7 @@ class UnitOfWork:
         self._user_books: Optional[UserBookRepository] = None
         self._loans: Optional[LoanRepository] = None
         self._loan_requests: Optional[LoanRequestRepository] = None
+        self._messages: Optional[MessageRepository] = None
 
     async def __aenter__(self) -> "UnitOfWork":
         if self._own_session:
@@ -26,10 +27,6 @@ class UnitOfWork:
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> bool:
-        """
-        Obsługa wyjścia z context manager.
-        Zwraca True jeśli wyjątek został obsłużony, False w przeciwnym razie.
-        """
         try:
             if exc_type is None:
                 await self.commit()
@@ -78,6 +75,12 @@ class UnitOfWork:
         if self._loan_requests is None:
             self._loan_requests = LoanRequestRepository(self.session)
         return self._loan_requests
+
+    @property
+    def messages(self) -> MessageRepository:
+        if self._messages is None:
+            self._messages = MessageRepository(self.session)
+        return self._messages
 
     async def commit(self) -> None:
         if self._session:
