@@ -7,7 +7,6 @@ from database.interfaces import (
     IUserBookRepository,
 )
 from src.services.interfaces import ILoanRequestService, IMessageService
-from src.core.constants import MAX_ACTIVE_LOANS
 from src.core.exceptions import (
     BookNotFoundException,
     NotAuthorizedException,

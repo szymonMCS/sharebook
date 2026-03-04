@@ -1,4 +1,3 @@
-import logging
 from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from src.api.deps import (
@@ -9,7 +8,6 @@ from src.services.interfaces import ICommunityBookService
 from src.schemas.book import CommunityBooksFilter
 from database.models import User
 
-logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/community", tags=["community"])
 
 

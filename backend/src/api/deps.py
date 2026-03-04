@@ -201,3 +201,11 @@ async def verify_csrf_token_only(request: Request) -> None:
             status_code=HTTP_403_FORBIDDEN,
             detail=ERROR_CSRF_TOKEN_INVALID,
         )
+
+async def get_current_active_admin(current_user: User = Depends(get_current_active_user)) -> User:
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return current_user
