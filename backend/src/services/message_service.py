@@ -47,7 +47,7 @@ class MessageService(IMessageService):
         # Sprawdź czy prośba istnieje
         request = await self._request_repo.get_by_id(loan_request_id)
         if not request:
-            raise NotFoundException(f"Loan request {loan_request_id} not found")
+            raise LoanRequestNotFoundException(loan_request_id)
         
         # Sprawdź uprawnienia
         if user_id not in [request.requester_id, request.owner_id]:
@@ -105,12 +105,6 @@ class MessageService(IMessageService):
             raise NotAuthorizedException()
         
         return await self._message_repo.mark_all_as_read(loan_request_id, user_id)
-    
-    async def get_total_unread_count(self, user_id: UUID) -> int:
-        #TODO: Wymaga optymalizacji - obecnie zwraca 0.
-        #TODO: Zaimplementować w MessageRepository
-        logger.debug(f"Total unread count for user {user_id} - not implemented yet")
-        return 0
     
     async def add_system_message(self, loan_request_id: UUID, content: str) -> MessageResponse:
         message = await self._message_repo.create_system_message(

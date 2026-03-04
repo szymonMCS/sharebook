@@ -5,6 +5,7 @@ from src.services.interfaces import ILoanService
 from database.interfaces import ILoanRepository
 from database.models import Loan
 from src.core.exceptions import BookNotFoundException, NotAuthorizedException
+from src.core.constants import LOAN_DURATION_DAYS, MAX_ACTIVE_LOANS
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ class LoanService(ILoanService):
             user_book_id=user_book_id,
             borrower_id=borrower_id,
             lender_id=lender_id,
-            loan_duration_days=self.LOAN_DURATION_DAYS
+            loan_duration_days=LOAN_DURATION_DAYS
         )
 
         logger.info(f"Created loan: {loan.id}")
@@ -50,7 +51,7 @@ class LoanService(ILoanService):
 
     async def can_borrow_more(self, borrower_id: UUID) -> bool:
         active_count = await self._loan_repo.count_active_for_borrower(borrower_id)
-        return active_count < self.MAX_ACTIVE_LOANS
+        return active_count < MAX_ACTIVE_LOANS
 
     async def get_loan_by_id(self, loan_id: UUID) -> Optional[Loan]:
         return await self._loan_repo.get_by_id(loan_id)

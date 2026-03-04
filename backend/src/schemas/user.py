@@ -30,17 +30,6 @@ class UserCreate(UserBase):
         return v
 
 
-class UserCreateInternal(UserBase):
-
-    model_config = ConfigDict(populate_by_name=True)
-    
-    hashed_password: str
-    first_name: str
-    last_name: str
-    location: str
-    phone: Optional[str] = None
-
-
 class UserUpdate(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)

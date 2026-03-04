@@ -254,9 +254,6 @@ class IMessageService(ABC):
     async def mark_all_as_read(self, loan_request_id: UUID, user_id: UUID) -> int:
         pass
     @abstractmethod
-    async def get_total_unread_count(self, user_id: UUID) -> int:
-        pass
-    @abstractmethod
     async def add_system_message(self, loan_request_id: UUID, content: str) -> "MessageResponse":
         pass
 

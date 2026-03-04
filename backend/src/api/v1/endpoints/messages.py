@@ -10,7 +10,7 @@ from src.core.exceptions import ShareBookException, NotAuthorizedException, Loan
 from database.models import User
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/loan-requests", tags=["messages"])
+router = APIRouter(tags=["messages"])
 
 
 @router.get("/{request_id}/messages", response_model=dict)
@@ -131,23 +131,4 @@ async def mark_all_messages_read(
             detail=str(e)
         )
 
-@router.get("/messages/unread-count", response_model=dict)
-async def get_unread_count(
-    message_service: IMessageService = Depends(get_message_service),
-    current_user: User = Depends(get_current_active_user)
-):
-    """
-    TODO: Obecnie zwraca 0 - wymaga pełnej implementacji w MessageRepository.
-    """
-    try:
-        count = await message_service.get_total_unread_count(current_user.id)
-        return {
-            "success": True,
-            "data": {"unread_count": count}
-        }
-    except Exception as e:
-        logger.exception("Error fetching unread count")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
+

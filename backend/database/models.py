@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Any
 from sqlalchemy import (
     String,
     Text,
@@ -11,6 +11,7 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from pgvector.sqlalchemy import Vector  # Import dla pgvector
 from database.config import Base
 
 
@@ -36,6 +37,7 @@ class User(Base):
     lent_loans: Mapped[List["Loan"]] = relationship("Loan", foreign_keys="Loan.lender_id", back_populates="lender")
     outgoing_requests: Mapped[List["LoanRequest"]] = relationship("LoanRequest", foreign_keys="LoanRequest.requester_id", back_populates="requester")
     incoming_requests: Mapped[List["LoanRequest"]] = relationship("LoanRequest", foreign_keys="LoanRequest.owner_id", back_populates="owner")
+    messages: Mapped[List["Message"]] = relationship("Message", back_populates="sender")
     
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email={self.email}, role={self.role})>"
@@ -61,6 +63,7 @@ class Book(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
     user_books: Mapped[List["UserBook"]] = relationship("UserBook", back_populates="book", cascade="all, delete-orphan")
+    chunks: Mapped[List["BookChunk"]] = relationship("BookChunk", back_populates="book", cascade="all, delete-orphan")
     
     def __repr__(self) -> str:
         return f"<Book(id={self.id}, title={self.title[:30]}..., isbn={self.isbn})>"
@@ -150,6 +153,25 @@ class Message(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     
     loan_request: Mapped["LoanRequest"] = relationship("LoanRequest", back_populates="messages")
+    sender: Mapped["User"] = relationship("User", back_populates="messages")
     
     def __repr__(self) -> str:
         return f"<Message(id={self.id}, type={self.message_type}, read={self.is_read})>"
+
+class BookChunk(Base):
+    
+    __tablename__ = "book_chunks"
+    
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4, index=True)
+    book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("books.id", ondelete="CASCADE"), nullable=False, index=True)
+    book_title: Mapped[str] = mapped_column(Text, nullable=False)
+    book_author: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    embedding: Mapped[Optional[Any]] = mapped_column(Vector(1536), nullable=True)
+    chunk_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    
+    book: Mapped["Book"] = relationship("Book", back_populates="chunks")
+    
+    def __repr__(self) -> str:
+        return f"<BookChunk(id={self.id}, book={self.book_title[:30]}..., index={self.chunk_index})>"

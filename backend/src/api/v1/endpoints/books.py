@@ -3,7 +3,7 @@ from uuid import UUID
 from typing import Optional
 from src.api.deps import get_book_catalog_service, get_current_user_optional
 from src.services.interfaces import IBookCatalogService
-from src.schemas.book import BookResponse
+
 from database.models import User
 
 router = APIRouter(prefix="/books", tags=["books"])
