@@ -89,6 +89,10 @@ def get_loan_request_service(factory: ServiceFactory = Depends(get_service_facto
 def get_message_service(factory: ServiceFactory = Depends(get_service_factory)) -> IMessageService:
     return factory.create_message_service()
 
+async def get_cover_service():
+    from src.services.cover import get_cover_service as get_cs
+    return await get_cs()
+
 async def extract_token_from_request(request: Request) -> Optional[str]:
     return request.cookies.get(ACCESS_TOKEN_COOKIE)
 
@@ -133,7 +137,6 @@ async def get_current_user(request: Request, db: AsyncSession = Depends(get_db))
             detail=ERROR_INVALID_TOKEN,
             headers={"WWW-Authenticate": WWW_AUTHENTICATE_HEADER},
         )
-
     return user
 
 async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
@@ -168,7 +171,6 @@ async def verify_csrf_protection(request: Request, current_user: User = Depends(
             status_code=HTTP_403_FORBIDDEN,
             detail=ERROR_CSRF_TOKEN_INVALID,
         )
-
     return current_user
 
 async def get_current_user_optional(request: Request, db: AsyncSession = Depends(get_db)) -> Optional[User]:

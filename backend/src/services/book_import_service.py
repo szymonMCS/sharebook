@@ -1,18 +1,21 @@
+"""Book Import Service - importowanie książek z zewnętrznych źródeł."""
 import logging
 from uuid import UUID
-from typing import Optional, List
+from typing import List
+
 from src.services.interfaces import (
     IBookImportService,
     IBookMetadataProvider,
 )
 from database.interfaces import IBookRepository
-from src.schemas.book import BookResponse, BookCreate
+from src.schemas.book import BookResponse
 from src.core.exceptions import BookNotFoundException
 
 logger = logging.getLogger(__name__)
 
 
 class BookImportService(IBookImportService):
+    """Serwis do importowania książek z Google Books i innych źródeł."""
 
     def __init__(
         self,
@@ -23,6 +26,7 @@ class BookImportService(IBookImportService):
         self._provider = metadata_provider
 
     async def import_by_isbn(self, isbn: str) -> BookResponse:
+        """Importuj książkę po ISBN jeśli nie istnieje w katalogu."""
         existing = await self._book_repo.get_by_isbn(isbn)
         if existing:
             logger.info(f"Book with ISBN {isbn} already in catalog")
@@ -47,6 +51,12 @@ class BookImportService(IBookImportService):
         return BookResponse.model_validate(book)
 
     async def enrich_book_data(self, book_id: UUID) -> BookResponse:
+        """Wzbogać dane książki o metadane z zewnętrznego źródła.
+        
+        Uwaga: Ta metoda jest używana przez background tasks.
+        Dla pełnego wzbogacenia (dane + okładka) użyj 
+        background_tasks.enrich_and_fetch_cover_background
+        """
         book = await self._book_repo.get_by_id(book_id)
         if not book:
             raise BookNotFoundException(book_id)
@@ -84,6 +94,7 @@ class BookImportService(IBookImportService):
         return BookResponse.model_validate(book)
 
     async def search_and_import(self, query: str, limit: int = 5) -> List[BookResponse]:
+        """Wyszukaj książki po tytule i zaimportuj je."""
         metadata_list = await self._provider.search_by_title(query, limit)
         
         imported = []

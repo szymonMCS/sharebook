@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from database.config import init_db, close_db
 from src.api.v1.router import api_router
 from src.config import settings
@@ -58,6 +59,8 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix="/api/v1")
+
+app.mount("/covers", StaticFiles(directory=settings.COVERS_PATH), name="covers")
 
 @app.exception_handler(ShareBookException)
 async def sharebook_exception_handler(request: Request, exc: ShareBookException):

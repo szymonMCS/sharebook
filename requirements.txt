@@ -17,6 +17,7 @@ openai
 tenacity
 aiofiles
 aiohttp
+pillow
 pytest
 pytest-asyncio
 httpx
