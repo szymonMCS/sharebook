@@ -295,3 +295,42 @@ class IServiceFactory(ABC):
     @abstractmethod
     def create_message_service(self) -> IMessageService:
         pass
+
+
+class IAdminService(ABC):
+    """Interfejs serwisu administracyjnego (SRP - tylko operacje admina)."""
+    
+    @abstractmethod
+    async def get_dashboard_stats(self) -> dict:
+        """Pobierz statystyki dashboardu."""
+        pass
+    
+    @abstractmethod
+    async def list_users(self, page: int = 1, per_page: int = 20, search: Optional[str] = None) -> dict:
+        """Lista użytkowników z paginacją."""
+        pass
+    
+    @abstractmethod
+    async def update_user_role(self, user_id: UUID, new_role: str, current_admin_id: UUID) -> dict:
+        """Zmień rolę użytkownika."""
+        pass
+    
+    @abstractmethod
+    async def reset_user_password(self, user_id: UUID, current_admin_id: UUID) -> dict:
+        """Resetuj hasło użytkownika."""
+        pass
+    
+    @abstractmethod
+    async def delete_user(self, user_id: UUID, current_admin_id: UUID) -> None:
+        """Usuń użytkownika."""
+        pass
+    
+    @abstractmethod
+    async def list_books(self, page: int = 1, per_page: int = 20) -> dict:
+        """Lista wszystkich książek."""
+        pass
+    
+    @abstractmethod
+    async def delete_book(self, book_id: UUID) -> None:
+        """Usuń książkę."""
+        pass
