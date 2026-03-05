@@ -35,6 +35,7 @@ from src.services.loan_service import LoanService
 from src.services.loan_request_service import LoanRequestService
 from src.services.message_service import MessageService
 from src.services.google_books_provider import GoogleBooksProvider
+# Cover service is now a singleton, use get_cover_service() from src.services.cover
 
 
 class RepositoryFactory(IRepositoryFactory):
@@ -148,3 +149,7 @@ class ServiceFactory(IServiceFactory):
             request_repo=self._repo_factory.create_loan_request_repository(),
             user_book_repo=self._repo_factory.create_user_book_repository()
         )
+    
+    def create_cover_service(self):
+        from src.services.cover import ShareBookCoverService
+        return ShareBookCoverService()

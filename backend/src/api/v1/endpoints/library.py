@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, 
 from src.api.deps import (
     get_library_management_service,
     get_book_import_service,
-    get_current_active_user
+    get_current_active_user,
+    get_db
 )
 from src.services.interfaces import (
     ILibraryManagementService,
@@ -17,7 +18,9 @@ from src.schemas.book import (
     UpdateStatusRequest
 )
 from src.core.exceptions import ShareBookException
+from src.api.v1.endpoints.background_tasks import enrich_and_fetch_cover_background
 from database.models import User
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/library", tags=["library"])
@@ -79,7 +82,8 @@ async def add_book_to_library(
     background_tasks: BackgroundTasks,
     library_service: ILibraryManagementService = Depends(get_library_management_service),
     import_service: IBookImportService = Depends(get_book_import_service),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         result = await library_service.add_book_to_library(
@@ -87,17 +91,26 @@ async def add_book_to_library(
             isbn=request.isbn,
             condition=request.condition
         )
+        background_tasks.add_task(
+            enrich_and_fetch_cover_background,
+            book_id=result.book.id,
+            isbn=request.isbn,
+            db=db
+        )
         
-        if result.book.title == "Wczytywanie...":
-            background_tasks.add_task(
-                import_service.enrich_book_data,
-                result.book.id
-            )
+        needs_enrichment = result.book.title == "Wczytywanie..."
         
         return {
             "success": True,
-            "message": "Book added to library. Data will be enriched shortly." if result.book.title == "Wczytywanie..." else "Book added to library.",
-            "data": result
+            "message": (
+                "Book added to library. Data and cover will be fetched shortly."
+                if needs_enrichment 
+                else "Book added to library. Cover will be fetched shortly."
+            ),
+            "data": {
+                **result.model_dump(),
+                "enrichment_status": "processing"
+            }
         }
         
     except ShareBookException as e:
@@ -108,7 +121,6 @@ async def add_book_to_library(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
-
 
 @router.patch("/my-books/{user_book_id}/lendable", response_model=dict)
 async def update_lendable_status(
@@ -139,7 +151,6 @@ async def update_lendable_status(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
-
 
 @router.patch("/my-books/{user_book_id}/status", response_model=dict)
 async def update_book_status(

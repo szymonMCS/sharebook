@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     GOOGLE_BOOKS_API_KEY: str = ""
     GOOGLE_BOOKS_API_URL: str = "https://www.googleapis.com/books/v1/volumes"
     GOOGLE_BOOKS_TIMEOUT: int = 10
+    
+    COVERS_PATH: str = "covers"
+    MAX_COVER_SIZE_MB: int = 5
+    ALLOWED_COVER_TYPES: list = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
 
     model_config = SettingsConfigDict(
         env_file="../.env",
