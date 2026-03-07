@@ -2,6 +2,7 @@ import uuid
 from typing import Optional, List
 from sqlalchemy import select, and_, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from database.interfaces import IUserBookRepository
 from database.models import UserBook, Book, User
 
@@ -16,12 +17,13 @@ class UserBookRepository(IUserBookRepository):
         )
         return result.scalar_one_or_none()
 
+    async def get_by_id_for_update(self, id: uuid.UUID) -> Optional[UserBook]:
+        from sqlalchemy import text
+        result = await self._db.execute(select(UserBook).where(UserBook.id == id).with_for_update())
+        return result.scalar_one_or_none()
+
     async def get_by_user_and_book(self, user_id: uuid.UUID, book_id: uuid.UUID) -> Optional[UserBook]:
-        result = await self._db.execute(
-            select(UserBook).where(
-                and_(UserBook.user_id == user_id, UserBook.book_id == book_id)
-            )
-        )
+        result = await self._db.execute(select(UserBook).where(and_(UserBook.user_id == user_id, UserBook.book_id == book_id)))
         return result.scalar_one_or_none()
 
     async def create(
@@ -49,7 +51,8 @@ class UserBookRepository(IUserBookRepository):
         id: uuid.UUID,
         status: Optional[str] = None,
         condition: Optional[str] = None,
-        is_lendable: Optional[bool] = None
+        is_lendable: Optional[bool] = None,
+        commit: bool = True
     ) -> Optional[UserBook]:
         user_book = await self.get_by_id(id)
         if not user_book:
@@ -62,8 +65,39 @@ class UserBookRepository(IUserBookRepository):
         if is_lendable is not None:
             user_book.is_lendable = is_lendable
 
-        await self._db.commit()
-        await self._db.refresh(user_book)
+        if commit:
+            await self._db.commit()
+            await self._db.refresh(user_book)
+        else:
+            await self._db.flush()
+            await self._db.refresh(user_book)
+        return user_book
+
+    async def update_with_lock(
+        self,
+        id: uuid.UUID,
+        status: Optional[str] = None,
+        condition: Optional[str] = None,
+        is_lendable: Optional[bool] = None,
+        commit: bool = True
+    ) -> Optional[UserBook]:
+        user_book = await self.get_by_id_for_update(id)
+        if not user_book:
+            return None
+
+        if status is not None:
+            user_book.status = status
+        if condition is not None:
+            user_book.condition = condition
+        if is_lendable is not None:
+            user_book.is_lendable = is_lendable
+
+        if commit:
+            await self._db.commit()
+            await self._db.refresh(user_book)
+        else:
+            await self._db.flush()
+            await self._db.refresh(user_book)
         return user_book
 
     async def delete(self, id: uuid.UUID) -> bool:
@@ -90,13 +124,28 @@ class UserBookRepository(IUserBookRepository):
         )
         return result.all()
 
+    async def get_user_library_with_books(
+        self,
+        user_id: uuid.UUID,
+        skip: int = 0,
+        limit: int = 100
+    ) -> List[UserBook]:
+        result = await self._db.execute(
+            select(UserBook)
+            .options(selectinload(UserBook.book))
+            .where(UserBook.user_id == user_id)
+            .offset(skip)
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
     def _build_community_subquery(self, status: Optional[str] = None):
         subquery_base = (
             select(
                 UserBook.book_id,
                 func.min(UserBook.id).label('first_user_book_id')
             )
-            .where(UserBook.is_lendable == True)
+            .where(UserBook.is_lendable.is_(True))
         )
 
         status_filter = None if status == 'all' else (status if status else "available")
@@ -163,4 +212,34 @@ class UserBookRepository(IUserBookRepository):
         query = self._apply_community_filters(query, subquery, exclude_user_id, search, author)
         
         result = await self._db.execute(query)
+        return result.scalar() or 0
+
+    async def count_user_library(self, user_id: uuid.UUID) -> int:
+        result = await self._db.execute(select(func.count()).where(UserBook.user_id == user_id))
+        return result.scalar() or 0
+
+    async def count_by_status(self, status: str) -> int:
+        result = await self._db.execute(select(func.count()).where(UserBook.status == status))
+        return result.scalar() or 0
+
+    async def count_owners_for_book(self, book_id: uuid.UUID) -> int:
+        result = await self._db.execute(select(func.count(func.distinct(UserBook.user_id))).where(UserBook.book_id == book_id))
+        return result.scalar() or 0
+
+    async def count_copies_for_book(self, book_id: uuid.UUID) -> int:
+        result = await self._db.execute(select(func.count()).where(UserBook.book_id == book_id))
+        return result.scalar() or 0
+
+    async def get_owners_for_book(self, book_id: uuid.UUID) -> List[UserBook]:
+        result = await self._db.execute(select(UserBook).options(selectinload(UserBook.user)).where(UserBook.book_id == book_id).order_by(UserBook.added_at.desc()))
+        return list(result.scalars().all())
+
+    async def count_borrowed_by_user(self, user_id: uuid.UUID) -> int:
+        from database.models import Loan
+        result = await self._db.execute(select(func.count()).select_from(Loan).where(Loan.borrower_id == user_id))
+        return result.scalar() or 0
+
+    async def count_lent_by_user(self, user_id: uuid.UUID) -> int:
+        from database.models import Loan
+        result = await self._db.execute(select(func.count()).select_from(Loan).where(Loan.lender_id == user_id))
         return result.scalar() or 0

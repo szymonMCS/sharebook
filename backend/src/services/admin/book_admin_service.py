@@ -1,12 +1,10 @@
 import logging
 from typing import Optional
 from uuid import UUID
-from sqlalchemy import func, select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from database.models import Book, UserBook, Loan
-from database.interfaces import IBookRepository
+from database.interfaces import IBookRepository, IUserBookRepository, ILoanRepository
 from src.core.exceptions import BookNotFoundException
-from src.services.admin.interfaces import IBookAdminService, BookListResult
+from src.services.interfaces import IBookAdminService, BookListResult
 
 logger = logging.getLogger(__name__)
 
@@ -19,35 +17,46 @@ class BookHasActiveLoansException(Exception):
 
 
 class BookAdminService(IBookAdminService):
-    def __init__(self, db: AsyncSession, book_repo: Optional[IBookRepository] = None):
+    def __init__(
+        self, 
+        db: AsyncSession, 
+        book_repo: Optional[IBookRepository] = None,
+        user_book_repo: Optional[IUserBookRepository] = None,
+        loan_repo: Optional[ILoanRepository] = None
+    ):
         self._db = db
         self._book_repo = book_repo
+        self._user_book_repo = user_book_repo
+        self._loan_repo = loan_repo
         
         if self._book_repo is None:
             from database.repositories.book_repository import BookRepository
             self._book_repo = BookRepository(db)
+        if self._user_book_repo is None:
+            from database.repositories.user_book_repository import UserBookRepository
+            self._user_book_repo = UserBookRepository(db)
+        if self._loan_repo is None:
+            from database.repositories.loan_repository import LoanRepository
+            self._loan_repo = LoanRepository(db)
     
-    async def list_books(self, page: int = 1, per_page: int = 20, search: Optional[str] = None, has_loans: Optional[bool] = None) -> BookListResult:
+    async def list_books(
+        self, 
+        page: int = 1, 
+        per_page: int = 20, 
+        search: Optional[str] = None, 
+        has_loans: Optional[bool] = None
+    ) -> BookListResult:
         skip = (page - 1) * per_page
-        query = select(Book)
         
-        if search:
-            search_filter = or_(Book.title.ilike(f"%{search}%"), Book.author.ilike(f"%{search}%"), Book.isbn.ilike(f"%{search}%"))
-            query = query.where(search_filter)
+        books, total = await self._book_repo.get_multi_with_search(
+            skip=skip,
+            limit=per_page,
+            search=search
+        )
         
-        query = query.order_by(Book.created_at.desc())
-        count_query = select(func.count()).select_from(Book)
-        if search:
-            count_query = count_query.where(search_filter)
-        
-        total = await self._db.scalar(count_query)
-        query = query.offset(skip).limit(per_page)
-        result = await self._db.execute(query)
-        books = result.scalars().all()
         data = []
         for book in books:
-            owners_count = await self._db.scalar(select(func.count(func.distinct(UserBook.user_id))).where(UserBook.book_id == book.id))
-            loans_count = await self._db.scalar(select(func.count()).select_from(Loan).join(UserBook, Loan.user_book_id == UserBook.id).where(UserBook.book_id == book.id))
+            stats = await self._book_repo.get_book_stats(book.id)
             data.append({
                 "id": str(book.id),
                 "title": book.title,
@@ -60,13 +69,13 @@ class BookAdminService(IBookAdminService):
                 "created_at": book.created_at.isoformat() if book.created_at else None,
                 "updated_at": book.updated_at.isoformat() if book.updated_at else None,
                 "stats": {
-                    "owners_count": owners_count or 0,
-                    "loans_count": loans_count or 0
+                    "owners_count": stats["owners_count"],
+                    "loans_count": stats["loans_count"]
                 }
             })
         return BookListResult(
             data=data,
-            total=total or 0,
+            total=total,
             page=page,
             per_page=per_page,
             total_pages=(total + per_page - 1) // per_page if per_page > 0 else 0
@@ -77,36 +86,24 @@ class BookAdminService(IBookAdminService):
         if not book:
             raise BookNotFoundException(str(book_id))
         
-        owners_count = await self._db.scalar(select(func.count(func.distinct(UserBook.user_id))).where(UserBook.book_id == book_id))
-        copies_count = await self._db.scalar(select(func.count()).select_from(UserBook).where(UserBook.book_id == book_id))
-        loans_count = await self._db.scalar(select(func.count()).select_from(Loan).join(UserBook, Loan.user_book_id == UserBook.id).where(UserBook.book_id == book_id))
-        active_loans_count = await self._db.scalar(select(func.count()).select_from(Loan).join(UserBook, Loan.user_book_id == UserBook.id).where(
-                UserBook.book_id == book_id,
-                Loan.status == "active"
-            )
-        )
-        owners_stmt = (select(UserBook).where(UserBook.book_id == book_id).order_by(UserBook.added_at.desc()))
-        owners_result = await self._db.execute(owners_stmt)
-        user_books = owners_result.scalars().all()
+        stats = await self._book_repo.get_book_stats(book_id)
+        user_books = await self._user_book_repo.get_owners_for_book(book_id)
         
         owners = []
         for ub in user_books:
-            from database.models import User
-            user_result = await self._db.execute(select(User).where(User.id == ub.user_id))
-            user = user_result.scalar_one_or_none()
-            
-            if user:
+            if ub.user:
                 owners.append({
                     "user_book_id": str(ub.id),
-                    "user_id": str(user.id),
-                    "email": user.email,
-                    "first_name": user.first_name,
-                    "last_name": user.last_name,
+                    "user_id": str(ub.user.id),
+                    "email": ub.user.email,
+                    "first_name": ub.user.first_name,
+                    "last_name": ub.user.last_name,
                     "status": ub.status,
                     "condition": ub.condition,
                     "is_lendable": ub.is_lendable,
                     "added_at": ub.added_at.isoformat() if ub.added_at else None
                 })
+        
         return {
             "id": str(book.id),
             "title": book.title,
@@ -121,12 +118,7 @@ class BookAdminService(IBookAdminService):
             "cover_url": book.cover_url,
             "created_at": book.created_at.isoformat() if book.created_at else None,
             "updated_at": book.updated_at.isoformat() if book.updated_at else None,
-            "stats": {
-                "owners_count": owners_count or 0,
-                "copies_count": copies_count or 0,
-                "loans_count": loans_count or 0,
-                "active_loans_count": active_loans_count or 0
-            },
+            "stats": stats,
             "owners": owners
         }
     
@@ -136,13 +128,10 @@ class BookAdminService(IBookAdminService):
             raise BookNotFoundException(str(book_id))
         
         if not force:
-            active_loans = await self._db.scalar(select(func.count()).select_from(Loan).join(UserBook, Loan.user_book_id == UserBook.id).where(
-                    UserBook.book_id == book_id,
-                    Loan.status == "active"
-                )
-            )
+            stats = await self._book_repo.get_book_stats(book_id)
+            active_loans = stats["active_loans_count"]
             
-            if active_loans and active_loans > 0:
+            if active_loans > 0:
                 raise BookHasActiveLoansException(book_id, active_loans)
         
         await self._book_repo.delete(book_id)
@@ -153,16 +142,18 @@ class BookAdminService(IBookAdminService):
     async def merge_books(self, source_book_id: UUID, target_book_id: UUID) -> dict:
         if source_book_id == target_book_id:
             raise ValueError("Cannot merge book with itself")
+        
         source = await self._book_repo.get_by_id(source_book_id)
         if not source:
             raise BookNotFoundException(str(source_book_id))
+        
         target = await self._book_repo.get_by_id(target_book_id)
         if not target:
             raise BookNotFoundException(str(target_book_id))
-        stmt = select(UserBook).where(UserBook.book_id == source_book_id)
-        result = await self._db.execute(stmt)
-        user_books = result.scalars().all()
+        
+        user_books = await self._user_book_repo.get_owners_for_book(source_book_id)
         moved_count = 0
+        
         for ub in user_books:
             ub.book_id = target_book_id
             moved_count += 1
