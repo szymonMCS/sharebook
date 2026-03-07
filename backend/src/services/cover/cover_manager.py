@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from pathlib import Path
-from src.services.cover.interfaces import ICoverSource, ISourceStrategy, CoverResult, CoverSourceType
+from src.services.interfaces import ICoverSource, ISourceStrategy, CoverResult, CoverSourceType
 from src.services.cover.storage import CoverStorage
 from src.config import settings
 

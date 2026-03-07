@@ -1,6 +1,6 @@
 from uuid import UUID
 from typing import Optional
-from src.services.interfaces import ITokenService
+from src.services.interfaces.auth import ITokenService
 from src.core.security import (
     create_access_token,
     create_refresh_token,
@@ -39,6 +39,9 @@ class TokenService(ITokenService):
         db_user = await self._user_repo.get(user_id)
         if not db_user:
             raise UserNotFoundException(user_id)
+
+        if not db_user.is_active:
+            raise RefreshTokenInvalidException()
 
         new_access_token = create_access_token(data={"sub": str(user_id)})
         new_csrf_token = generate_csrf_token()

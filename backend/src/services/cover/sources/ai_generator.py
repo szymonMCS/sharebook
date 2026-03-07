@@ -5,7 +5,7 @@ from io import BytesIO
 from typing import Optional
 import aiohttp
 from src.config import settings
-from src.services.cover.interfaces import ICoverSource, CoverResult, CoverSourceType
+from src.services.interfaces import ICoverSource, CoverResult, CoverSourceType
 
 logger = logging.getLogger(__name__)
 

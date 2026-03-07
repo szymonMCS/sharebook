@@ -1,7 +1,7 @@
 import logging
 from uuid import UUID
 from typing import Optional, List
-from src.services.interfaces import IBookCatalogService
+from src.services.interfaces.books import IBookCatalogService
 from database.interfaces import IBookRepository
 from src.schemas.book import BookCreate, BookUpdate, BookResponse
 from src.core.exceptions import BookNotFoundException, DuplicateISBNException
@@ -59,7 +59,7 @@ class BookCatalogService(IBookCatalogService):
             page_count=data.page_count,
             language=data.language,
             genre=data.genre,
-            cover_path=data.cover_path
+            cover_url=data.cover_url
         )
         logger.info(f"Book created in catalog: {book.id} (ISBN: {book.isbn})")
         return BookResponse.model_validate(book)

@@ -2,7 +2,7 @@ import logging
 from typing import List
 from openai import AsyncOpenAI
 from src.config import settings
-from src.services.ai.interfaces import IEmbeddingService
+from src.services.interfaces import IEmbeddingService
 
 logger = logging.getLogger(__name__)
 

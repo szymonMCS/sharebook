@@ -1,4 +1,4 @@
-from src.services.enrichment.interfaces import (
+from src.services.interfaces import (
     IEnrichmentAdapter,
     IEnrichmentStrategy,
     IEnrichmentOrchestrator,

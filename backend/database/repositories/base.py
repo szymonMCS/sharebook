@@ -1,9 +1,10 @@
-from abc import ABC
-from typing import TypeVar, Generic, List, Optional, Type
+from typing import TypeVar, List, Optional, Type
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from database.interfaces import IRepository, IUserRepository
+from src.core.exceptions import DuplicateEntryError, DatabaseError
 
 ModelType = TypeVar("ModelType")
 
@@ -27,26 +28,41 @@ class BaseRepository(IRepository[ModelType]):
         return list(result.scalars().all())
     
     async def create(self, obj_in: dict) -> ModelType:
-        db_obj = self._model(**obj_in)
-        self._db.add(db_obj)
-        await self._db.commit()
-        await self._db.refresh(db_obj)
-        return db_obj
+        try:
+            db_obj = self._model(**obj_in)
+            self._db.add(db_obj)
+            await self._db.commit()
+            await self._db.refresh(db_obj)
+            return db_obj
+        except IntegrityError as e:
+            await self._db.rollback()
+            raise DuplicateEntryError(f"Entity already exists: {e}")
+        except SQLAlchemyError as e:
+            await self._db.rollback()
+            raise DatabaseError(f"Database error: {e}")
     
     async def update(self, db_obj: ModelType, obj_in: dict) -> ModelType:
-        for field, value in obj_in.items():
-            setattr(db_obj, field, value)
-        await self._db.commit()
-        await self._db.refresh(db_obj)
-        return db_obj
+        try:
+            for field, value in obj_in.items():
+                setattr(db_obj, field, value)
+            await self._db.commit()
+            await self._db.refresh(db_obj)
+            return db_obj
+        except SQLAlchemyError as e:
+            await self._db.rollback()
+            raise DatabaseError(f"Database error: {e}")
     
     async def delete(self, id: UUID) -> bool:
-        obj = await self.get(id)
-        if not obj:
-            return False
-        await self._db.delete(obj)
-        await self._db.commit()
-        return True
+        try:
+            obj = await self.get(id)
+            if not obj:
+                return False
+            await self._db.delete(obj)
+            await self._db.commit()
+            return True
+        except SQLAlchemyError as e:
+            await self._db.rollback()
+            raise DatabaseError(f"Database error: {e}")
     
     async def exists(self, id: UUID) -> bool:
         result = await self._db.execute(

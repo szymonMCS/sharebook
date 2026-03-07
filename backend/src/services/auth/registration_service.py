@@ -1,5 +1,5 @@
 import logging
-from src.services.interfaces import IRegistrationService, IPasswordService
+from src.services.interfaces.auth import IRegistrationService, IPasswordService
 from database.interfaces import IUserRepository
 from src.schemas.user import UserCreate, UserResponse
 from src.core.exceptions import DuplicateEmailException

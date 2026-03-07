@@ -1,16 +1,85 @@
-from .auth_service import AuthService
-from .user_service import UserService
-from .registration_service import RegistrationService
-from .token_service import TokenService
-from .password_service import PasswordService
-from .book_catalog_service import BookCatalogService
-from .library_management_service import LibraryManagementService
-from .community_book_service import CommunityBookService
-from .book_import_service import BookImportService
-from .loan_service import LoanService
-from .loan_request_service import LoanRequestService
+from .auth import (
+    AuthService,
+    RegistrationService,
+    TokenService,
+    PasswordService,
+    CookieService,
+)
+from .users import UserService
+from .books import (
+    BookCatalogService,
+    LibraryManagementService,
+    CommunityBookService,
+    BookImportService,
+)
+from .loans import LoanService, LoanRequestService
+from .messages import MessageService
 from .google_books_provider import GoogleBooksProvider, GoogleBooksProviderFactory, MockBookMetadataProvider
 from .factories import ServiceFactory, RepositoryFactory
+from .admin import (
+    AdminDashboardService,
+    UserAdminService,
+    BookAdminService,
+    IAdminDashboardService,
+    IUserAdminService,
+    IBookAdminService,
+    DashboardStats,
+    UserListResult,
+    BookListResult,
+)
+from .ai import (
+    IChunkingStrategy,
+    Chunk,
+    ChunkingResult,
+    SmartChunkingStrategy,
+    SimpleChunkingStrategy,
+    IEmbeddingService,
+    OpenAIEmbeddingService,
+    IVectorSearchService,
+    PgVectorSearchService,
+    BookIndexingService,
+)
+from .cover import (
+    ICoverSource,
+    ISourceStrategy,
+    CoverResult,
+    CoverSourceType,
+    CoverStorage,
+    OpenLibrarySource,
+    GoogleBooksSource,
+    AICoverSource,
+    SequentialSourceStrategy,
+    CoverManager,
+)
+from .enrichment import (
+    IEnrichmentAdapter,
+    IEnrichmentStrategy,
+    IEnrichmentOrchestrator,
+    EnrichmentField,
+    EnrichmentData,
+    EnrichmentContext,
+    EnrichmentResult,
+    GoogleBooksAdapter,
+    OpenAIAdapter,
+    DefaultEnrichmentStrategy,
+    EnrichmentOrchestrator,
+)
+from .sagas import (
+    ISaga,
+    ISagaStep,
+    SagaResult,
+    SagaContext,
+    CreateLoanStep,
+    UpdateBookStatusStep,
+    AcceptRequestStep,
+    SagaOrchestrator,
+)
+from .websocket import (
+    ConnectionRegistry,
+    SubscriptionManager,
+    Broadcaster,
+    WebSocketManager,
+)
 
 __all__ = [
     "AuthService",
@@ -18,15 +87,69 @@ __all__ = [
     "RegistrationService",
     "TokenService",
     "PasswordService",
+    "CookieService",
     "BookCatalogService",
     "LibraryManagementService",
     "CommunityBookService",
     "BookImportService",
     "LoanService",
     "LoanRequestService",
+    "MessageService",
     "GoogleBooksProvider",
     "GoogleBooksProviderFactory",
     "MockBookMetadataProvider",
     "ServiceFactory",
     "RepositoryFactory",
+    "AdminDashboardService",
+    "UserAdminService",
+    "BookAdminService",
+    "IAdminDashboardService",
+    "IUserAdminService",
+    "IBookAdminService",
+    "DashboardStats",
+    "UserListResult",
+    "BookListResult",
+    "IChunkingStrategy",
+    "Chunk",
+    "ChunkingResult",
+    "SmartChunkingStrategy",
+    "SimpleChunkingStrategy",
+    "IEmbeddingService",
+    "OpenAIEmbeddingService",
+    "IVectorSearchService",
+    "PgVectorSearchService",
+    "BookIndexingService",
+    "ICoverSource",
+    "ISourceStrategy",
+    "CoverResult",
+    "CoverSourceType",
+    "CoverStorage",
+    "OpenLibrarySource",
+    "GoogleBooksSource",
+    "AICoverSource",
+    "SequentialSourceStrategy",
+    "CoverManager",
+    "IEnrichmentAdapter",
+    "IEnrichmentStrategy",
+    "IEnrichmentOrchestrator",
+    "EnrichmentField",
+    "EnrichmentData",
+    "EnrichmentContext",
+    "EnrichmentResult",
+    "GoogleBooksAdapter",
+    "OpenAIAdapter",
+    "DefaultEnrichmentStrategy",
+    "EnrichmentOrchestrator",
+    "ISaga",
+    "ISagaStep",
+    "SagaResult",
+    "SagaContext",
+    "CreateLoanStep",
+    "UpdateBookStatusStep",
+    "AcceptRequestStep",
+    "SagaOrchestrator",
+    "ConnectionRegistry",
+    "SubscriptionManager",
+    "Broadcaster",
+    "WebSocketManager",
 ]

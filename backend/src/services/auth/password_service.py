@@ -1,4 +1,4 @@
-from src.services.interfaces import IPasswordService
+from src.services.interfaces.auth import IPasswordService
 from src.core.security import get_password_hash, verify_password as verify_pwd
 
 

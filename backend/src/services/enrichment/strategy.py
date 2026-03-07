@@ -1,5 +1,5 @@
 from typing import Any, Dict, List
-from src.services.enrichment.interfaces import IEnrichmentStrategy, IEnrichmentAdapter, EnrichmentContext, EnrichmentData, EnrichmentField
+from src.services.interfaces import IEnrichmentStrategy, IEnrichmentAdapter, EnrichmentContext, EnrichmentData, EnrichmentField
 from src.core.constants import PLACEHOLDER_TITLE
 
 

@@ -3,7 +3,7 @@ from typing import List
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 from src.config import settings
-from src.services.ai.interfaces import IChunkingStrategy, Chunk, ChunkingResult
+from src.services.interfaces import IChunkingStrategy, Chunk, ChunkingResult
 
 logger = logging.getLogger(__name__)
 

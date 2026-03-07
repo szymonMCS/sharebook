@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from src.services.cover.interfaces import ICoverSource, CoverResult, CoverSourceType
+from src.services.interfaces import ICoverSource, CoverResult, CoverSourceType
 from src.services.google_books_client import get_google_books_client
 
 logger = logging.getLogger(__name__)

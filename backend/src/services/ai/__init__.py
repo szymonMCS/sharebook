@@ -1,4 +1,4 @@
-from src.services.ai.interfaces import (
+from src.services.interfaces import (
     IChunkingStrategy,
     IEmbeddingService,
     IVectorSearchService,

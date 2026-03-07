@@ -1,6 +1,6 @@
 from uuid import UUID
 from typing import Optional, List
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, update
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.interfaces import IMessageRepository
@@ -24,6 +24,14 @@ class MessageRepository(IMessageRepository):
         await self._db.refresh(message)
         return message
     
+    async def create_system_message_optimized(self, loan_request_id: UUID, content: str, owner_id: UUID) -> Message:
+        return await self.create(
+            loan_request_id=loan_request_id,
+            sender_id=owner_id,
+            content=content,
+            message_type="system"
+        )
+    
     async def get_by_id(self, message_id: UUID) -> Optional[Message]:
         result = await self._db.execute(select(Message).where(Message.id == message_id))
         return result.scalar_one_or_none()
@@ -43,7 +51,7 @@ class MessageRepository(IMessageRepository):
                 and_(
                     Message.loan_request_id == loan_request_id,
                     Message.sender_id != user_id,  # Nie liczymy własnych wiadomości
-                    Message.is_read == False
+                    Message.is_read.is_(False)
                 )
             )
         )
@@ -60,38 +68,29 @@ class MessageRepository(IMessageRepository):
     
     async def mark_all_as_read(self, loan_request_id: UUID, user_id: UUID) -> int:
         result = await self._db.execute(
-            select(Message).where(
+            update(Message)
+            .where(
                 and_(
                     Message.loan_request_id == loan_request_id,
                     Message.sender_id != user_id,
-                    Message.is_read == False
+                    Message.is_read.is_(False)
                 )
             )
+            .values(is_read=True)
         )
-        messages = result.scalars().all()
-        
-        count = 0
-        for msg in messages:
-            msg.is_read = True
-            count += 1
-        
-        if count > 0:
-            await self._db.commit()
-        
-        return count
+        await self._db.commit()
+        return result.rowcount
     
     async def create_system_message(self, loan_request_id: UUID, content: str) -> Message:
-        # Pobierz prośbę aby uzyskać owner_id
-        result = await self._db.execute(select(LoanRequest).where(LoanRequest.id == loan_request_id))
-        loan_request = result.scalar_one_or_none()
+        result = await self._db.execute(select(LoanRequest.owner_id).where(LoanRequest.id == loan_request_id))
+        owner_id = result.scalar_one_or_none()
         
-        if not loan_request:
+        if not owner_id:
             raise ValueError(f"Loan request {loan_request_id} not found")
         
-        # System message jest wysyłana w imieniu ownera
         return await self.create(
             loan_request_id=loan_request_id,
-            sender_id=loan_request.owner_id,
+            sender_id=owner_id,
             content=content,
             message_type="system"
         )

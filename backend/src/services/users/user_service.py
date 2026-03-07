@@ -1,7 +1,7 @@
 import logging
 from uuid import UUID
 from typing import Optional
-from src.services.interfaces import IUserService
+from src.services.interfaces.auth import IUserService
 from database.interfaces import IUserRepository
 from src.schemas.user import UserUpdate, UserResponse, UserProfileResponse
 from src.core.exceptions import UserNotFoundException
@@ -46,8 +46,8 @@ class UserService(IUserService):
         if not db_user:
             raise UserNotFoundException(user_id)
 
-        # TODO: Get actual books count from repository
-        books_count = 0
+        # Pobierz rzeczywistą liczbę książek
+        books_count = await self._user_repo.count_user_books(user_id)
 
         return UserProfileResponse(
             id=db_user.id,
@@ -58,7 +58,6 @@ class UserService(IUserService):
             is_active=db_user.is_active,
             location=db_user.location,
             phone=db_user.phone,
-            bio=db_user.bio,
             created_at=db_user.created_at,
             books_count=books_count
         )
