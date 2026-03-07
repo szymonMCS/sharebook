@@ -1,109 +1,52 @@
 import logging
 from typing import Optional, List
 
-import httpx
-
-from src.services.interfaces import IBookMetadataProvider, IMetadataProviderFactory, BookMetadata
+from src.services.interfaces.books import IBookMetadataProvider, IMetadataProviderFactory, BookMetadata
+from src.services.google_books_client import GoogleBooksClient, get_google_books_client
 
 logger = logging.getLogger(__name__)
 
 
 class GoogleBooksProvider(IBookMetadataProvider):
-
-    BASE_URL = "https://www.googleapis.com/books/v1"
+    def __init__(self, client: Optional[GoogleBooksClient] = None):
+        self._client = client or get_google_books_client()
 
     async def fetch_by_isbn(self, isbn: str) -> Optional[BookMetadata]:
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(
-                    f"{self.BASE_URL}/volumes",
-                    params={"q": f"isbn:{isbn}"},
-                    timeout=10.0
-                )
-                response.raise_for_status()
-                data = response.json()
-
-                if not data.get("items"):
-                    logger.warning(f"No book found in Google Books for ISBN: {isbn}")
-                    return None
-
-                volume = data["items"][0]["volumeInfo"]
-                return self._parse_volume(volume, isbn)
-
-            except httpx.HTTPError as e:
-                logger.error(f"HTTP error fetching from Google Books: {e}")
-                return None
-            except Exception as e:
-                logger.error(f"Error parsing Google Books response: {e}")
-                return None
-
-    async def search_by_title(self, title: str, max_results: int = 10) -> List[BookMetadata]:
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(
-                    f"{self.BASE_URL}/volumes",
-                    params={
-                        "q": f"intitle:{title}",
-                        "maxResults": max_results
-                    },
-                    timeout=10.0
-                )
-                response.raise_for_status()
-                data = response.json()
-
-                results = []
-                for item in data.get("items", []):
-                    volume = item["volumeInfo"]
-                    isbn = self._extract_isbn(volume)
-                    if isbn:
-                        results.append(self._parse_volume(volume, isbn))
-
-                return results
-
-            except httpx.HTTPError as e:
-                logger.error(f"HTTP error searching Google Books: {e}")
-                return []
-            except Exception as e:
-                logger.error(f"Error parsing Google Books response: {e}")
-                return []
-
-    def _parse_volume(self, volume: dict, isbn: str) -> BookMetadata:
-        published_date = volume.get("publishedDate", "")
-        year = None
-        if published_date:
-            try:
-                year = int(published_date[:4])
-            except (ValueError, IndexError):
-                pass
-
-        image_links = volume.get("imageLinks", {})
-        cover_url = image_links.get("thumbnail") or image_links.get("smallThumbnail")
-
-        categories = volume.get("categories", [])
-        genre = categories[0] if categories else None
-
+        data = await self._client.fetch_by_isbn(isbn)
+        if not data:
+            return None
+        
         return BookMetadata(
-            isbn=isbn,
-            title=volume.get("title", "Unknown Title"),
-            author=", ".join(volume.get("authors", ["Unknown Author"])),
-            description=volume.get("description"),
-            publisher=volume.get("publisher"),
-            publication_year=year,
-            page_count=volume.get("pageCount"),
-            language=volume.get("language"),
-            genre=genre,
-            cover_url=cover_url
+            isbn=data.get("isbn", isbn),
+            title=data.get("title", "Unknown Title"),
+            author=data.get("author", "Unknown Author"),
+            description=data.get("description"),
+            publisher=data.get("publisher"),
+            publication_year=data.get("publication_year"),
+            page_count=data.get("page_count"),
+            language=data.get("language"),
+            genre=data.get("genre"),
+            cover_url=data.get("cover_url")
         )
 
-    def _extract_isbn(self, volume: dict) -> Optional[str]:
-        identifiers = volume.get("industryIdentifiers", [])
-        for ident in identifiers:
-            if ident.get("type") == "ISBN_13":
-                return ident.get("identifier")
-        for ident in identifiers:
-            if ident.get("type") == "ISBN_10":
-                return ident.get("identifier")
-        return None
+    async def search_by_title(self, title: str, max_results: int = 10) -> List[BookMetadata]:
+        results = await self._client.search_by_title(title, max_results)
+        
+        return [
+            BookMetadata(
+                isbn=data.get("isbn", ""),
+                title=data.get("title", "Unknown Title"),
+                author=data.get("author", "Unknown Author"),
+                description=data.get("description"),
+                publisher=data.get("publisher"),
+                publication_year=data.get("publication_year"),
+                page_count=data.get("page_count"),
+                language=data.get("language"),
+                genre=data.get("genre"),
+                cover_url=data.get("cover_url")
+            )
+            for data in results
+        ]
 
 
 class GoogleBooksProviderFactory(IMetadataProviderFactory):

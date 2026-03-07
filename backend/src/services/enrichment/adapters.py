@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 from openai import AsyncOpenAI
 from src.config import settings
 from src.core.constants import PLACEHOLDER_TITLE
-from src.services.enrichment.interfaces import IEnrichmentAdapter, EnrichmentData, EnrichmentContext, EnrichmentField
+from src.services.interfaces import IEnrichmentAdapter, EnrichmentData, EnrichmentContext, EnrichmentField
 from src.services.google_books_client import get_google_books_client
 
 logger = logging.getLogger(__name__)

@@ -2,7 +2,7 @@ import logging
 from uuid import UUID
 from typing import Optional
 from database.interfaces import IMessageRepository, ILoanRequestRepository, IUserBookRepository
-from src.services.interfaces import IMessageService
+from src.services.interfaces.messages import IMessageService
 from src.schemas.loan import MessageResponse, MessageThreadResponse
 from src.core.exceptions import NotAuthorizedException, LoanRequestNotFoundException
 
@@ -21,18 +21,15 @@ class MessageService(IMessageService):
         self._user_book_repo = user_book_repo
     
     async def send_message(self, loan_request_id: UUID, sender_id: UUID, content: str) -> MessageResponse:
-        # Sprawdź czy prośba istnieje
         request = await self._request_repo.get_by_id(loan_request_id)
         if not request:
             raise LoanRequestNotFoundException(loan_request_id)
         
-        # Sprawdź uprawnienia - tylko owner lub requester mogą pisać
         if sender_id not in [request.requester_id, request.owner_id]:
             raise NotAuthorizedException(
                 "You are not part of this conversation"
             )
         
-        # Utwórz wiadomość
         message = await self._message_repo.create(
             loan_request_id=loan_request_id,
             sender_id=sender_id,
@@ -44,32 +41,26 @@ class MessageService(IMessageService):
         return self._to_response(message)
     
     async def get_thread(self, loan_request_id: UUID, user_id: UUID) -> MessageThreadResponse:
-        # Sprawdź czy prośba istnieje
         request = await self._request_repo.get_by_id(loan_request_id)
         if not request:
             raise LoanRequestNotFoundException(loan_request_id)
         
-        # Sprawdź uprawnienia
         if user_id not in [request.requester_id, request.owner_id]:
             raise NotAuthorizedException("You are not part of this conversation")
         
-        # Pobierz wiadomości z eager loading (JOIN z users)
         messages = await self._message_repo.get_by_loan_request(loan_request_id, include_sender=True)
         
-        # Policz nieprzeczytane dla tego użytkownika
         unread_count = await self._message_repo.get_unread_count(loan_request_id, user_id)
         
-        # Pobierz tytuł książki jeśli mamy user_book_repo
         book_title = "Unknown Book"
         if self._user_book_repo:
             try:
                 user_book = await self._user_book_repo.get_by_id(request.user_book_id)
                 if user_book and user_book.book:
                     book_title = user_book.book.title
-            except Exception:
-                pass  # Fallback do "Unknown Book"
+            except Exception as e:
+                logger.warning(f"Could not fetch book title for request {request.id}: {e}")
         
-        # Mapuj na schemy
         message_responses = [self._to_response(m) for m in messages]
         
         return MessageThreadResponse(
@@ -85,13 +76,11 @@ class MessageService(IMessageService):
     async def mark_message_as_read(self, message_id: UUID, user_id: UUID) -> bool:
         message = await self._message_repo.get_by_id(message_id)
         if not message:
-            raise LoanRequestNotFoundException(message_id)  # Reuse existing exception
+            raise LoanRequestNotFoundException(message_id)
         
-        # Nie można oznaczyć własnej wiadomości jako przeczytanej
         if message.sender_id == user_id:
             return False
         
-        # Sprawdź czy user ma dostęp do tego wątku
         request = await self._request_repo.get_by_id(message.loan_request_id)
         if not request or user_id not in [request.requester_id, request.owner_id]:
             raise NotAuthorizedException()
@@ -99,7 +88,6 @@ class MessageService(IMessageService):
         return await self._message_repo.mark_as_read(message_id)
     
     async def mark_all_as_read(self, loan_request_id: UUID, user_id: UUID) -> int:
-        # Sprawdź dostęp
         request = await self._request_repo.get_by_id(loan_request_id)
         if not request or user_id not in [request.requester_id, request.owner_id]:
             raise NotAuthorizedException()
@@ -115,7 +103,6 @@ class MessageService(IMessageService):
         return self._to_response(message)
     
     def _to_response(self, message) -> MessageResponse:
-        # Pobierz dane nadawcy z relacji (eager loaded)
         sender_name = "Unknown"
         sender_avatar = None
         
@@ -123,7 +110,6 @@ class MessageService(IMessageService):
             first_name = message.sender.first_name or ""
             last_name = message.sender.last_name or ""
             sender_name = f"{first_name} {last_name}".strip() or "Unknown"
-            # sender_avatar = message.sender.avatar_url  # Jeśli dodamy w przyszłości
         
         return MessageResponse(
             id=message.id,

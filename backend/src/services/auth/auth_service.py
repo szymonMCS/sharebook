@@ -1,6 +1,6 @@
 import logging
 from typing import Optional
-from src.services.interfaces import IAuthService, IPasswordService
+from src.services.interfaces.auth import IAuthService, IPasswordService
 from database.interfaces import IUserRepository
 from src.schemas.user import UserResponse
 

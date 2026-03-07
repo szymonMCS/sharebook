@@ -1,7 +1,7 @@
 import logging
 from uuid import UUID
 from typing import Optional, List
-from src.services.interfaces import ICommunityBookService
+from src.services.interfaces.books import ICommunityBookService
 from database.interfaces import IUserBookRepository, IBookRepository, IUserRepository
 from src.schemas.book import CommunityBookResponse, OwnerInfo
 

@@ -3,7 +3,7 @@ from typing import List, Optional
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.repositories.book_repository import BookRepository
-from src.services.enrichment.interfaces import (
+from src.services.interfaces import (
     IEnrichmentOrchestrator,
     IEnrichmentAdapter,
     IEnrichmentStrategy,

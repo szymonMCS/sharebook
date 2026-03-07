@@ -1,22 +1,34 @@
 import logging
 from typing import Optional, List
 from uuid import UUID
-from src.services.interfaces import ILoanService
-from database.interfaces import ILoanRepository
+from src.services.interfaces.loans import ILoanService
+from database.interfaces import ILoanRepository, IUserRepository
 from database.models import Loan
-from src.core.exceptions import BookNotFoundException, NotAuthorizedException
+from src.core.exceptions import LoanNotFoundException, NotAuthorizedException, UserNotFoundException
 from src.core.constants import LOAN_DURATION_DAYS, MAX_ACTIVE_LOANS
 
 logger = logging.getLogger(__name__)
 
 
 class LoanService(ILoanService):
-    def __init__(self, loan_repo: ILoanRepository):
+    def __init__(self, loan_repo: ILoanRepository, user_repo: IUserRepository):
         self._loan_repo = loan_repo
+        self._user_repo = user_repo
+
+    def _validate_borrower_exists(self, user: Optional[object], borrower_id: UUID) -> None:
+        if not user:
+            raise UserNotFoundException(borrower_id)
+
+    def _validate_loan_limit(self, active_count: int, borrower_id: UUID) -> None:
+        if active_count >= MAX_ACTIVE_LOANS:
+            raise ValueError(f"Maximum {MAX_ACTIVE_LOANS} active loans")
 
     async def create_loan(self, user_book_id: UUID, borrower_id: UUID, lender_id: UUID) -> Loan:
-        if not await self.can_borrow_more(borrower_id):
-            raise ValueError("User has reached the maximum number of active loans")
+        user = await self._user_repo.get_by_id_for_update(borrower_id)
+        self._validate_borrower_exists(user, borrower_id)
+        
+        active_count = await self._loan_repo.count_active_for_borrower(borrower_id)
+        self._validate_loan_limit(active_count, borrower_id)
 
         loan = await self._loan_repo.create(
             user_book_id=user_book_id,
@@ -31,10 +43,13 @@ class LoanService(ILoanService):
     async def return_book(self, loan_id: UUID, user_id: UUID) -> Loan:
         loan = await self._loan_repo.get_by_id(loan_id)
         if not loan:
-            raise BookNotFoundException(loan_id)
+            raise LoanNotFoundException(loan_id)
 
         if loan.borrower_id != user_id and loan.lender_id != user_id:
             raise NotAuthorizedException("Not authorized to return this loan")
+
+        if loan.status == "returned":
+            return loan
 
         updated_loan = await self._loan_repo.mark_returned(loan_id)
 
@@ -58,3 +73,6 @@ class LoanService(ILoanService):
 
     async def count_active_loans(self, borrower_id: UUID) -> int:
         return await self._loan_repo.count_active_for_borrower(borrower_id)
+
+    async def delete_loan(self, loan_id: UUID) -> bool:
+        return await self._loan_repo.delete(loan_id)

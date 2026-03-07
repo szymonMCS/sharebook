@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import aiohttp
-from src.services.cover.interfaces import ICoverSource, CoverResult, CoverSourceType
+from src.services.interfaces import ICoverSource, CoverResult, CoverSourceType
 
 logger = logging.getLogger(__name__)
 

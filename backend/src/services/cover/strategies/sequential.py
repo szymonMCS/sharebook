@@ -1,4 +1,4 @@
-from src.services.cover.interfaces import ISourceStrategy, ICoverSource, CoverResult, CoverSourceType
+from src.services.interfaces import ISourceStrategy, ICoverSource, CoverResult, CoverSourceType
 
 
 class SequentialSourceStrategy(ISourceStrategy):
