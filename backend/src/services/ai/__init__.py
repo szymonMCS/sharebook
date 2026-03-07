@@ -1,12 +1,24 @@
-from .vector_service import VectorService
-from .ai_service import AIService, ChatContext, ChatMessage
-from .chunking_models import Chunk, Chunks
+from src.services.ai.interfaces import (
+    IChunkingStrategy,
+    IEmbeddingService,
+    IVectorSearchService,
+    Chunk,
+    ChunkingResult,
+)
+from src.services.ai.chunking import SmartChunkingStrategy, SimpleChunkingStrategy
+from src.services.ai.embedding import OpenAIEmbeddingService
+from src.services.ai.search import PgVectorSearchService
+from src.services.ai.indexing import BookIndexingService
 
 __all__ = [
-    "VectorService",
-    "AIService",
-    "ChatContext",
-    "ChatMessage",
+    "IChunkingStrategy",
+    "IEmbeddingService",
+    "IVectorSearchService",
     "Chunk",
-    "Chunks",
+    "ChunkingResult",
+    "SmartChunkingStrategy",
+    "SimpleChunkingStrategy",
+    "OpenAIEmbeddingService",
+    "PgVectorSearchService",
+    "BookIndexingService",
 ]
