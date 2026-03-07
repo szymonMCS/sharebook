@@ -2,29 +2,41 @@ import logging
 import secrets
 from typing import Optional
 from uuid import UUID
-from sqlalchemy import func, select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from database.models import User, UserBook, Loan
-from database.interfaces import IUserRepository
+from database.interfaces import IUserRepository, IUserBookRepository, ILoanRepository
 from src.core.security import get_password_hash
 from src.core.exceptions import (
     UserNotFoundException,
     SelfModificationException,
     InvalidRoleException
 )
-from src.services.admin.interfaces import IUserAdminService, UserListResult
+from src.services.interfaces import IUserAdminService, UserListResult
 
 logger = logging.getLogger(__name__)
 
 
 class UserAdminService(IUserAdminService):
-    def __init__(self, db: AsyncSession, user_repo: Optional[IUserRepository] = None):
+    def __init__(
+        self, 
+        db: AsyncSession, 
+        user_repo: Optional[IUserRepository] = None,
+        user_book_repo: Optional[IUserBookRepository] = None,
+        loan_repo: Optional[ILoanRepository] = None
+    ):
         self._db = db
         self._user_repo = user_repo
+        self._user_book_repo = user_book_repo
+        self._loan_repo = loan_repo
         
         if self._user_repo is None:
             from database.repositories.user_repository import UserRepository
             self._user_repo = UserRepository(db)
+        if self._user_book_repo is None:
+            from database.repositories.user_book_repository import UserBookRepository
+            self._user_book_repo = UserBookRepository(db)
+        if self._loan_repo is None:
+            from database.repositories.loan_repository import LoanRepository
+            self._loan_repo = LoanRepository(db)
     
     async def list_users(
         self,
@@ -36,31 +48,13 @@ class UserAdminService(IUserAdminService):
     ) -> UserListResult:
         skip = (page - 1) * per_page
         
-        query = select(User)
-
-        if search:
-            search_filter = or_(User.email.ilike(f"%{search}%"), User.first_name.ilike(f"%{search}%"), User.last_name.ilike(f"%{search}%"))
-            query = query.where(search_filter)
-        if role:
-            query = query.where(User.role == role)
-        if is_active is not None:
-            query = query.where(User.is_active == is_active)
-        
-        query = query.order_by(User.created_at.desc())
-        
-        count_query = select(func.count()).select_from(User)
-        if search:
-            count_query = count_query.where(search_filter)
-        if role:
-            count_query = count_query.where(User.role == role)
-        if is_active is not None:
-            count_query = count_query.where(User.is_active == is_active)
-        
-        total = await self._db.scalar(count_query)
-        
-        query = query.offset(skip).limit(per_page)
-        result = await self._db.execute(query)
-        users = result.scalars().all()
+        users, total = await self._user_repo.get_multi_with_filters(
+            skip=skip,
+            limit=per_page,
+            search=search,
+            role=role,
+            is_active=is_active
+        )
         
         data = [
             {
@@ -79,20 +73,21 @@ class UserAdminService(IUserAdminService):
         ]
         return UserListResult(
             data=data,
-            total=total or 0,
+            total=total,
             page=page,
             per_page=per_page,
             total_pages=(total + per_page - 1) // per_page if per_page > 0 else 0
         )
     
     async def get_user_details(self, user_id: UUID) -> dict:
-        user = await self._user_repo.get(user_id)
+        user = await self._user_repo.get_by_id(user_id)
         if not user:
             raise UserNotFoundException(str(user_id))
         
-        books_count = await self._db.scalar(select(func.count()).select_from(UserBook).where(UserBook.user_id == user_id))
-        borrowed_count = await self._db.scalar(select(func.count()).select_from(Loan).where(Loan.borrower_id == user_id))
-        lent_count = await self._db.scalar(select(func.count()).select_from(Loan).where(Loan.lender_id == user_id))
+        books_count = await self._user_book_repo.count_user_library(user_id)
+        borrowed_count = await self._loan_repo.count_active_for_borrower(user_id)
+        lent_count = await self._user_book_repo.count_lent_by_user(user_id)
+        
         return {
             "id": str(user.id),
             "email": user.email,
@@ -106,9 +101,9 @@ class UserAdminService(IUserAdminService):
             "created_at": user.created_at.isoformat() if user.created_at else None,
             "updated_at": user.updated_at.isoformat() if user.updated_at else None,
             "stats": {
-                "books_count": books_count or 0,
-                "borrowed_count": borrowed_count or 0,
-                "lent_count": lent_count or 0
+                "books_count": books_count,
+                "borrowed_count": borrowed_count,
+                "lent_count": lent_count
             }
         }
     
@@ -118,7 +113,7 @@ class UserAdminService(IUserAdminService):
         if new_role not in ["reader", "admin"]:
             raise InvalidRoleException(new_role)
         
-        user = await self._user_repo.get(user_id)
+        user = await self._user_repo.get_by_id(user_id)
         if not user:
             raise UserNotFoundException(str(user_id))
         
@@ -136,7 +131,7 @@ class UserAdminService(IUserAdminService):
         if user_id == current_admin_id:
             raise SelfModificationException("password")
         
-        user = await self._user_repo.get(user_id)
+        user = await self._user_repo.get_by_id(user_id)
         if not user:
             raise UserNotFoundException(str(user_id))
         
@@ -156,7 +151,7 @@ class UserAdminService(IUserAdminService):
         if user_id == current_admin_id:
             raise SelfModificationException("deactivate")
         
-        user = await self._user_repo.get(user_id)
+        user = await self._user_repo.get_by_id(user_id)
         if not user:
             raise UserNotFoundException(str(user_id))
         
@@ -171,7 +166,7 @@ class UserAdminService(IUserAdminService):
         }
     
     async def activate_user(self, user_id: UUID, current_admin_id: UUID) -> dict:
-        user = await self._user_repo.get(user_id)
+        user = await self._user_repo.get_by_id(user_id)
         if not user:
             raise UserNotFoundException(str(user_id))
         
@@ -189,7 +184,7 @@ class UserAdminService(IUserAdminService):
         if user_id == current_admin_id:
             raise SelfModificationException("delete")
 
-        user = await self._user_repo.get(user_id)
+        user = await self._user_repo.get_by_id(user_id)
         if not user:
             raise UserNotFoundException(str(user_id))
         

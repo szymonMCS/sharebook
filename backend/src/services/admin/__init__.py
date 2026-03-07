@@ -1,4 +1,4 @@
-from src.services.admin.interfaces import (
+from src.services.interfaces import (
     IAdminDashboardService,
     IUserAdminService,
     IBookAdminService,
