@@ -1,15 +1,18 @@
-from .storage import CoverStorage
-from .downloader import CoverDownloader, CoverSource, DownloadResult
-from .ai_generator import CoverAIGenerator
-from .service import ShareBookCoverService, CoverResult, get_cover_service
+from src.services.cover.interfaces import ICoverSource, ISourceStrategy, CoverResult, CoverSourceType
+from src.services.cover.storage import CoverStorage
+from src.services.cover.sources import OpenLibrarySource, GoogleBooksSource, AICoverSource
+from src.services.cover.strategies import SequentialSourceStrategy
+from src.services.cover.cover_manager import CoverManager
 
 __all__ = [
-    "CoverStorage",
-    "CoverDownloader",
-    "CoverSource",
-    "DownloadResult",
-    "CoverAIGenerator",
-    "ShareBookCoverService",
+    "ICoverSource",
+    "ISourceStrategy",
     "CoverResult",
-    "get_cover_service",
+    "CoverSourceType",
+    "CoverStorage",
+    "OpenLibrarySource",
+    "GoogleBooksSource",
+    "AICoverSource",
+    "SequentialSourceStrategy",
+    "CoverManager",
 ]
