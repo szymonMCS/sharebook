@@ -10,12 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class MessageService(IMessageService):
-    def __init__(
-        self,
-        message_repo: IMessageRepository,
-        request_repo: ILoanRequestRepository,
-        user_book_repo: Optional[IUserBookRepository] = None
-    ):
+    def __init__(self, message_repo: IMessageRepository, request_repo: ILoanRequestRepository, user_book_repo: Optional[IUserBookRepository] = None):
         self._message_repo = message_repo
         self._request_repo = request_repo
         self._user_book_repo = user_book_repo
@@ -24,18 +19,10 @@ class MessageService(IMessageService):
         request = await self._request_repo.get_by_id(loan_request_id)
         if not request:
             raise LoanRequestNotFoundException(loan_request_id)
+        if not await self.can_access_thread(loan_request_id, sender_id):
+            raise NotAuthorizedException("You are not part of this conversation")
         
-        if sender_id not in [request.requester_id, request.owner_id]:
-            raise NotAuthorizedException(
-                "You are not part of this conversation"
-            )
-        
-        message = await self._message_repo.create(
-            loan_request_id=loan_request_id,
-            sender_id=sender_id,
-            content=content,
-            message_type="text"
-        )
+        message = await self._message_repo.create(loan_request_id=loan_request_id, sender_id=sender_id, content=content, message_type="text")
         
         logger.info(f"Message sent in request {loan_request_id} by user {sender_id}")
         return self._to_response(message)
@@ -44,14 +31,11 @@ class MessageService(IMessageService):
         request = await self._request_repo.get_by_id(loan_request_id)
         if not request:
             raise LoanRequestNotFoundException(loan_request_id)
-        
-        if user_id not in [request.requester_id, request.owner_id]:
+        if not await self.can_access_thread(loan_request_id, user_id):
             raise NotAuthorizedException("You are not part of this conversation")
         
         messages = await self._message_repo.get_by_loan_request(loan_request_id, include_sender=True)
-        
         unread_count = await self._message_repo.get_unread_count(loan_request_id, user_id)
-        
         book_title = "Unknown Book"
         if self._user_book_repo:
             try:
@@ -73,34 +57,39 @@ class MessageService(IMessageService):
             unread_count=unread_count
         )
     
-    async def mark_message_as_read(self, message_id: UUID, user_id: UUID) -> bool:
+    async def mark_messages_as_read(self, message_id: UUID, user_id: UUID) -> bool:
         message = await self._message_repo.get_by_id(message_id)
         if not message:
             raise LoanRequestNotFoundException(message_id)
-        
         if message.sender_id == user_id:
             return False
-        
         request = await self._request_repo.get_by_id(message.loan_request_id)
-        if not request or user_id not in [request.requester_id, request.owner_id]:
+        if not request or not await self.can_access_thread(message.loan_request_id, user_id):
             raise NotAuthorizedException()
-        
         return await self._message_repo.mark_as_read(message_id)
     
     async def mark_all_as_read(self, loan_request_id: UUID, user_id: UUID) -> int:
         request = await self._request_repo.get_by_id(loan_request_id)
-        if not request or user_id not in [request.requester_id, request.owner_id]:
+        if not request or not await self.can_access_thread(loan_request_id, user_id):
             raise NotAuthorizedException()
         
-        return await self._message_repo.mark_all_as_read(loan_request_id, user_id)
+        count = await self._message_repo.mark_all_as_read(loan_request_id, user_id)
+        logger.info(f"Marked {count} messages as read for user {user_id} in request {loan_request_id}")
+        return count
     
     async def add_system_message(self, loan_request_id: UUID, content: str) -> MessageResponse:
-        message = await self._message_repo.create_system_message(
-            loan_request_id=loan_request_id,
-            content=content
-        )
+        message = await self._message_repo.create_system_message(loan_request_id=loan_request_id, content=content)
         logger.info(f"System message added to request {loan_request_id}: {content[:50]}...")
         return self._to_response(message)
+    
+    async def can_access_thread(self, loan_request_id: UUID, user_id: UUID) -> bool:
+        loan_request = await self._request_repo.get_by_id(loan_request_id)
+        if not loan_request:
+            return False
+        return (
+            loan_request.requester_id == user_id or
+            loan_request.owner_id == user_id
+        )
     
     def _to_response(self, message) -> MessageResponse:
         sender_name = "Unknown"
@@ -110,6 +99,7 @@ class MessageService(IMessageService):
             first_name = message.sender.first_name or ""
             last_name = message.sender.last_name or ""
             sender_name = f"{first_name} {last_name}".strip() or "Unknown"
+            sender_avatar = message.sender.avatar_url if hasattr(message.sender, 'avatar_url') else None
         
         return MessageResponse(
             id=message.id,

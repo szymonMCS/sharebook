@@ -1,68 +1,105 @@
+"""Book-related interfaces."""
 from abc import ABC, abstractmethod
-from uuid import UUID
 from typing import Optional, List, TYPE_CHECKING
+from uuid import UUID
 
 if TYPE_CHECKING:
-    from src.schemas.book import BookCreate, BookUpdate, BookResponse, UserBookResponse, CommunityBookResponse
+    from src.schemas.book import BookCreate, BookUpdate, BookResponse
 
 
-class IBookCatalogService(ABC):
-    @abstractmethod
-    async def get_by_id(self, book_id: UUID) -> "BookResponse":
-        pass
-    @abstractmethod
-    async def get_by_isbn(self, isbn: str) -> Optional["BookResponse"]:
-        pass
-    @abstractmethod
-    async def search(self, query: Optional[str] = None, author: Optional[str] = None, genre: Optional[str] = None, skip: int = 0, limit: int = 20) -> tuple[List["BookResponse"], int]:
-        pass
-    @abstractmethod
-    async def create(self, data: "BookCreate") -> "BookResponse":
-        pass
-    @abstractmethod
-    async def update(self, book_id: UUID, data: "BookUpdate") -> "BookResponse":
-        pass
+class IBookService(ABC):
+    """Main interface for book catalog operations."""
 
+    @abstractmethod
+    async def create_book(self, book: "BookCreate") -> "BookResponse": ...
 
-class ILibraryManagementService(ABC):
     @abstractmethod
-    async def add_book_to_library(self, user_id: UUID, isbn: str, condition: str) -> "UserBookResponse":
-        pass
-    @abstractmethod
-    async def get_library(self, user_id: UUID, skip: int = 0, limit: int = 100) -> tuple[List["UserBookResponse"], int]:
-        pass
-    @abstractmethod
-    async def get_library_item(self, user_id: UUID, user_book_id: UUID) -> Optional["UserBookResponse"]:
-        pass
-    @abstractmethod
-    async def remove_from_library(self, user_id: UUID, user_book_id: UUID) -> bool:
-        pass
-    @abstractmethod
-    async def update_lendable_status(self, user_id: UUID, user_book_id: UUID, is_lendable: bool) -> "UserBookResponse":
-        pass
-    @abstractmethod
-    async def update_status(self, user_id: UUID, user_book_id: UUID, status: str) -> "UserBookResponse":
-        pass
+    async def get_book(self, book_id: UUID) -> "BookResponse": ...
 
+    @abstractmethod
+    async def list_books(self, skip: int = 0, limit: int = 100) -> list["BookResponse"]: ...
 
-class ICommunityBookService(ABC):
+    @abstractmethod
+    async def get_user_books(self, user_id: UUID, skip: int = 0, limit: int = 100) -> list["BookResponse"]: ...
+
     @abstractmethod
     async def get_community_books(
         self,
-        exclude_user_id: Optional[UUID] = None,
-        status: Optional[str] = None,
-        search: Optional[str] = None,
-        author: Optional[str] = None,
+        user_id: UUID | None,
+        skip: int = 0,
+        limit: int = 100,
+        status: str | None = None,
+        search: str | None = None,
+        author: str | None = None
+    ) -> list["BookResponse"]: ...
+
+    @abstractmethod
+    async def count_community_books(
+        self,
+        user_id: UUID | None,
+        status: str | None = None,
+        search: str | None = None,
+        author: str | None = None
+    ) -> int: ...
+
+    @abstractmethod
+    async def search_books(self, query: str, filters: dict) -> list["BookResponse"]: ...
+
+    @abstractmethod
+    async def add_book(self, user_id: UUID, data: "BookCreate") -> "BookResponse": ...
+
+    @abstractmethod
+    async def update_book(self, book_id: UUID, user_id: UUID, data: "BookUpdate") -> "BookResponse": ...
+
+    @abstractmethod
+    async def delete_book(self, book_id: UUID, user_id: UUID) -> None: ...
+
+    @abstractmethod
+    async def toggle_lendable(self, book_id: UUID, user_id: UUID, is_lendable: bool) -> "BookResponse": ...
+
+    @abstractmethod
+    async def enrich_book_with_ai(self, book_data: dict) -> tuple[dict, str | None]: ...
+
+    @abstractmethod
+    async def get_by_isbn(self, isbn: str) -> "BookResponse | None": ...
+
+    @abstractmethod
+    async def search(
+        self,
+        query: str | None = None,
+        author: str | None = None,
+        genre: str | None = None,
         skip: int = 0,
         limit: int = 20
-    ) -> tuple[List["CommunityBookResponse"], int]:
-        pass
+    ) -> tuple[list["BookResponse"], int]: ...
+
+
+class IUserBookService(ABC):
+    """Interface for UserBook service managing user's book collection."""
+
+    @abstractmethod
+    async def add_book_to_user(self, user_id: UUID, book_id: UUID, **kwargs) -> "BookResponse": ...
+
+    @abstractmethod
+    async def get_user_library(self, user_id: UUID) -> list: ...
+
+    @abstractmethod
+    async def remove_book_from_user(self, user_id: UUID, book_id: UUID) -> bool: ...
+
+    @abstractmethod
+    async def update_book_status(self, user_id: UUID, book_id: UUID, status: str) -> "BookResponse": ...
+
+    @abstractmethod
+    async def toggle_lendable(self, user_book_id: UUID) -> "BookResponse": ...
 
 
 class IBookMetadataProvider(ABC):
+    """Interface for external book metadata providers (Google Books, etc)."""
+
     @abstractmethod
     async def fetch_by_isbn(self, isbn: str) -> Optional["BookMetadata"]:
         pass
+
     @abstractmethod
     async def search_by_title(self, title: str, max_results: int = 10) -> List["BookMetadata"]:
         pass
@@ -71,18 +108,6 @@ class IBookMetadataProvider(ABC):
 class IMetadataProviderFactory(ABC):
     @abstractmethod
     def create_provider(self) -> IBookMetadataProvider:
-        pass
-
-
-class IBookImportService(ABC):
-    @abstractmethod
-    async def import_by_isbn(self, isbn: str) -> "BookResponse":
-        pass
-    @abstractmethod
-    async def enrich_book_data(self, book_id: UUID) -> "BookResponse":
-        pass
-    @abstractmethod
-    async def search_and_import(self, query: str, limit: int = 5) -> List["BookResponse"]:
         pass
 
 

@@ -1,13 +1,9 @@
-from .auth_service import AuthService
-from .registration_service import RegistrationService
-from .token_service import TokenService
-from .password_service import PasswordService
+from .service import AuthService
 from .cookie_service import CookieService
+from .token_service import TokenService
 
 __all__ = [
     "AuthService",
-    "RegistrationService",
-    "TokenService",
-    "PasswordService",
     "CookieService",
+    "TokenService",
 ]

@@ -12,10 +12,8 @@ class SubscriptionManager:
         async with self._lock:
             if book_id not in self._book_subscribers:
                 self._book_subscribers[book_id] = set()
-
             if websocket in self._book_subscribers[book_id]:
                 return False
-
             self._book_subscribers[book_id].add(websocket)
             return True
 
@@ -23,15 +21,11 @@ class SubscriptionManager:
         async with self._lock:
             if book_id not in self._book_subscribers:
                 return False
-
             if websocket not in self._book_subscribers[book_id]:
                 return False
-
             self._book_subscribers[book_id].discard(websocket)
-
             if not self._book_subscribers[book_id]:
                 del self._book_subscribers[book_id]
-
             return True
 
     def unsubscribe_all(self, websocket: WebSocket) -> List[str]:

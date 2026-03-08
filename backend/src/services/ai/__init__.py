@@ -1,24 +1,12 @@
-from src.services.interfaces import (
-    IChunkingStrategy,
-    IEmbeddingService,
-    IVectorSearchService,
-    Chunk,
-    ChunkingResult,
-)
-from src.services.ai.chunking import SmartChunkingStrategy, SimpleChunkingStrategy
-from src.services.ai.embedding import OpenAIEmbeddingService
-from src.services.ai.search import PgVectorSearchService
-from src.services.ai.indexing import BookIndexingService
+from src.services.ai.vector_service import VectorService
+from src.services.ai.ai_service import AIService, AIResponse, Source, AIServiceException
+from src.services.ai.markdown_generator import MarkdownGeneratorService
 
 __all__ = [
-    "IChunkingStrategy",
-    "IEmbeddingService",
-    "IVectorSearchService",
-    "Chunk",
-    "ChunkingResult",
-    "SmartChunkingStrategy",
-    "SimpleChunkingStrategy",
-    "OpenAIEmbeddingService",
-    "PgVectorSearchService",
-    "BookIndexingService",
+    "VectorService",
+    "AIService",
+    "AIResponse",
+    "Source",
+    "AIServiceException",
+    "MarkdownGeneratorService",
 ]
