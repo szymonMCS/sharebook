@@ -15,8 +15,6 @@ class DashboardStats:
     new_users_today: int
     new_books_today: int
     generated_at: datetime
-
-
 @dataclass
 class UserListResult:
     data: List[dict]
@@ -24,8 +22,6 @@ class UserListResult:
     page: int
     per_page: int
     total_pages: int
-
-
 @dataclass
 class BookListResult:
     data: List[dict]
@@ -52,14 +48,7 @@ class IAdminDashboardService(ABC):
 
 class IUserAdminService(ABC):
     @abstractmethod
-    async def list_users(
-        self,
-        page: int = 1,
-        per_page: int = 20,
-        search: Optional[str] = None,
-        role: Optional[str] = None,
-        is_active: Optional[bool] = None
-    ) -> UserListResult:
+    async def list_users(self, page: int = 1, per_page: int = 20, search: Optional[str] = None, role: Optional[str] = None, is_active: Optional[bool] = None) -> UserListResult:
         pass
     @abstractmethod
     async def get_user_details(self, user_id: UUID) -> dict:
@@ -83,15 +72,8 @@ class IUserAdminService(ABC):
 
 class IBookAdminService(ABC):
     @abstractmethod
-    async def list_books(
-        self,
-        page: int = 1,
-        per_page: int = 20,
-        search: Optional[str] = None,
-        has_loans: Optional[bool] = None
-    ) -> BookListResult:
+    async def list_books(self, page: int = 1, per_page: int = 20, search: Optional[str] = None, has_loans: Optional[bool] = None) -> BookListResult:
         pass
-    
     @abstractmethod
     async def get_book_details(self, book_id: UUID) -> dict:
         pass

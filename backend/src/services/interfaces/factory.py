@@ -73,21 +73,28 @@ class IServiceFactory(ABC):
     @abstractmethod
     def create_book_admin_service(self) -> "IBookAdminService":
         pass
+    # Book Discovery and AI services
     @abstractmethod
-    def create_embedding_service(self):
+    def create_book_discovery_service(self):
+        """Create book discovery service for AI-powered book search."""
         pass
     @abstractmethod
-    def create_vector_search_service(self):
+    def create_vector_service(self):
+        """Create vector service for embeddings and similarity search."""
         pass
     @abstractmethod
-    def create_book_indexing_service(self):
+    def create_ai_service(self):
+        """Create AI service for RAG-based recommendations."""
         pass
     @abstractmethod
-    def create_cover_manager(self):
+    def create_markdown_generator_service(self):
+        """Create markdown generator service for knowledge base."""
         pass
     @abstractmethod
-    def create_enrichment_orchestrator(self):
+    def create_cover_service(self):
+        """Create cover service for fetching book covers."""
         pass
     @abstractmethod
-    def create_loan_acceptance_saga(self):
+    def create_user_book_service(self):
+        """Create user book service for library management."""
         pass

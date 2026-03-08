@@ -1,28 +1,20 @@
+"""Cover service interfaces - simplified version."""
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
-from enum import Enum
-
-
-class CoverSourceType(Enum):
-    OPENLIBRARY = "openlibrary"
-    GOOGLE_BOOKS = "google_books"
-    AI_GENERATED = "ai"
-    CACHE = "cache"
-    NONE = "none"
 
 
 @dataclass
-class CoverResult:
+class SimpleCoverResult:
+    """Result of cover operation."""
     isbn: str
     success: bool
-    data: Optional[bytes] = None
     local_path: Optional[Path] = None
     error: Optional[str] = None
-    source: CoverSourceType = CoverSourceType.NONE
     from_cache: bool = False
     ai_generated: bool = False
+    source: str = "none"
 
     @property
     def local_url(self) -> Optional[str]:
@@ -33,30 +25,41 @@ class CoverResult:
         return f"https://covers.openlibrary.org/b/isbn/{self.isbn}-M.jpg"
 
 
-class ICoverSource(ABC):
-    @property
+class ICoverService(ABC):
+    """Interface for cover service (ShareBookCoverService).
+    
+    Flow: Cache -> OpenLibrary -> AI Fallback
+    """
+    
     @abstractmethod
-    def source_type(self) -> CoverSourceType:
+    def exists_locally(self, isbn: str) -> bool:
+        """Check if cover exists in local storage."""
         pass
+    
     @abstractmethod
-    async def fetch_cover(self, isbn: str, book_title: Optional[str] = None, book_author: Optional[str] = None, book_genre: Optional[str] = None) -> CoverResult:
+    def get_cover_url(self, isbn: str) -> Optional[str]:
+        """Get the URL path for a cover if it exists locally."""
         pass
-    @abstractmethod
-    def is_available(self) -> bool:
-        pass
-    @abstractmethod
-    def get_priority(self) -> int:
-        pass
-
-
-class ISourceStrategy(ABC):
+    
     @abstractmethod
     async def fetch_cover(
-        self,
-        sources: list[ICoverSource],
-        isbn: str,
+        self, 
+        isbn: str, 
         book_title: Optional[str] = None,
-        book_author: Optional[str] = None,
-        book_genre: Optional[str] = None
-    ) -> CoverResult:
+        book_author: Optional[str] = None, 
+        book_genre: Optional[str] = None,
+        force_refresh: bool = False, 
+        allow_ai_fallback: bool = True
+    ) -> SimpleCoverResult:
+        """Fetch cover from cache, OpenLibrary, or generate via AI."""
+        pass
+    
+    @abstractmethod
+    async def batch_fetch(self, books: list[dict], skip_existing: bool = True) -> list[SimpleCoverResult]:
+        """Fetch covers for multiple books concurrently."""
+        pass
+    
+    @abstractmethod
+    async def close(self) -> None:
+        """Close resources."""
         pass
