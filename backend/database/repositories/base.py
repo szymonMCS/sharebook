@@ -14,17 +14,11 @@ class BaseRepository(IRepository[ModelType]):
         self._model = model
     
     async def get(self, id: UUID) -> Optional[ModelType]:
-        result = await self._db.execute(
-            select(self._model).where(self._model.id == id)
-        )
+        result = await self._db.execute(select(self._model).where(self._model.id == id))
         return result.scalar_one_or_none()
     
     async def get_multi(self, skip: int = 0, limit: int = 100) -> List[ModelType]:
-        result = await self._db.execute(
-            select(self._model)
-            .offset(skip)
-            .limit(limit)
-        )
+        result = await self._db.execute(select(self._model).offset(skip).limit(limit))
         return list(result.scalars().all())
     
     async def create(self, obj_in: dict) -> ModelType:
@@ -65,10 +59,7 @@ class BaseRepository(IRepository[ModelType]):
             raise DatabaseError(f"Database error: {e}")
     
     async def exists(self, id: UUID) -> bool:
-        result = await self._db.execute(
-            select(func.count())
-            .where(self._model.id == id)
-        )
+        result = await self._db.execute(select(func.count()).where(self._model.id == id))
         return result.scalar() > 0
 
 __all__ = ["BaseRepository", "IUserRepository"]

@@ -62,7 +62,6 @@ class LoanRepository(ILoanRepository):
         
         await self._db.delete(loan)
         await self._db.commit()
-        logger.info(f"Loan deleted (compensation): {loan_id}")
         return True
 
     async def get_borrower_loans(self, borrower_id: UUID, status: Optional[str] = None, skip: int = 0, limit: int = 100) -> List[Loan]:
@@ -82,15 +81,7 @@ class LoanRepository(ILoanRepository):
         return list(result.scalars().all())
 
     async def count_active_for_borrower(self, borrower_id: UUID) -> int:
-        result = await self._db.execute(
-            select(func.count())
-            .where(
-                and_(
-                    Loan.borrower_id == borrower_id,
-                    Loan.status == "active"
-                )
-            )
-        )
+        result = await self._db.execute(select(func.count()).where(and_(Loan.borrower_id == borrower_id, Loan.status == "active")))
         return result.scalar() or 0
 
     async def count_all(self) -> int:

@@ -6,9 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.interfaces import ILoanRequestRepository
 from database.models import LoanRequest
 
-
 class LoanRequestRepository(ILoanRequestRepository):
-
     def __init__(self, db: AsyncSession):
         self._db = db
 
@@ -114,11 +112,7 @@ class LoanRequestRepository(ILoanRequestRepository):
         return result.scalar() or 0
 
     async def get_by_id_for_update(self, request_id: UUID) -> Optional[LoanRequest]:
-        result = await self._db.execute(
-            select(LoanRequest)
-            .where(LoanRequest.id == request_id)
-            .with_for_update()
-        )
+        result = await self._db.execute(select(LoanRequest).where(LoanRequest.id == request_id).with_for_update())
         return result.scalar_one_or_none()
 
     async def update_status_atomic(
@@ -146,11 +140,7 @@ class LoanRequestRepository(ILoanRequestRepository):
         if requester_id:
             where_clause.append(LoanRequest.requester_id == requester_id)
         
-        result = await self._db.execute(
-            update(LoanRequest)
-            .where(and_(*where_clause))
-            .values(**update_values)
-        )
+        result = await self._db.execute(update(LoanRequest).where(and_(*where_clause)).values(**update_values))
         await self._db.commit()
         
         if result.rowcount == 0:
@@ -163,14 +153,48 @@ class LoanRequestRepository(ILoanRequestRepository):
         if "message" in data and data["message"] is not None:
             update_values["message"] = data["message"]
         
-        result = await self._db.execute(
-            update(LoanRequest)
-            .where(LoanRequest.id == request_id)
-            .values(**update_values)
-        )
+        result = await self._db.execute(update(LoanRequest).where(LoanRequest.id == request_id).values(**update_values))
         await self._db.commit()
         
         if result.rowcount == 0:
             return None
         
         return await self.get_by_id(request_id)
+
+    async def count_pending_for_book(self, user_book_id: UUID) -> int:
+        result = await self._db.execute(select(func.count()).where(and_(LoanRequest.user_book_id == user_book_id, LoanRequest.status == "pending"))
+)
+        return result.scalar() or 0
+
+    async def count_reserved_for_book(self, user_book_id: UUID) -> int:
+        result = await self._db.execute(
+            select(func.count())
+            .where(
+                and_(
+                    LoanRequest.user_book_id == user_book_id,
+                    LoanRequest.status == "reserved"
+                )
+            )
+        )
+        return result.scalar() or 0
+
+    async def get_pending_for_book(self, user_book_id: UUID) -> List[LoanRequest]:
+        result = await self._db.execute(
+            select(LoanRequest)
+            .where(
+                and_(
+                    LoanRequest.user_book_id == user_book_id,
+                    LoanRequest.status == "pending"
+                )
+            )
+        )
+        return list(result.scalars().all())
+
+    async def delete(self, request_id: UUID) -> bool:
+        request = await self.get_by_id(request_id)
+        if not request:
+            return False
+        
+        await self._db.delete(request)
+        await self._db.commit()
+        return True

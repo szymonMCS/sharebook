@@ -50,7 +50,7 @@ class MessageRepository(IMessageRepository):
             select(func.count(Message.id)).where(
                 and_(
                     Message.loan_request_id == loan_request_id,
-                    Message.sender_id != user_id,  # Nie liczymy własnych wiadomości
+                    Message.sender_id != user_id,
                     Message.is_read.is_(False)
                 )
             )
