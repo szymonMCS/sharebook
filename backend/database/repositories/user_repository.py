@@ -32,7 +32,6 @@ class UserRepository(BaseRepository[User], IUserRepository):
         total = count_result.scalar() or 0  
         result = await self._db.execute(select(User).offset(skip).limit(limit))
         users = list(result.scalars().all())
-        
         return users, total
 
     async def count_user_books(self, user_id: UUID) -> int:
@@ -64,18 +63,15 @@ class UserRepository(BaseRepository[User], IUserRepository):
         if role:
             query = query.where(User.role == role)
             count_query = count_query.where(User.role == role)
-        
         if is_active is not None:
             query = query.where(User.is_active == is_active)
             count_query = count_query.where(User.is_active == is_active)
         
         count_result = await self._db.execute(count_query)
         total = count_result.scalar() or 0
-        
         query = query.offset(skip).limit(limit)
         result = await self._db.execute(query)
         users = list(result.scalars().all())
-        
         return users, total
 
     async def count_all(self) -> int:
@@ -93,7 +89,6 @@ class UserRepository(BaseRepository[User], IUserRepository):
     async def get_daily_registrations(self, days: int) -> List[dict]:
         from datetime import timezone, timedelta
         since = datetime.now(timezone.utc) - timedelta(days=days)
-        
         stmt = (
             select(func.date(User.created_at).label("date"), func.count().label("count"))
             .where(User.created_at >= since)

@@ -1,16 +1,132 @@
 import uuid
-from typing import Optional, List
 from datetime import datetime
+from typing import Optional, List, Any, Tuple
 from sqlalchemy import select, or_, func, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
+from database.models import Book, UserBook, User, Loan
 from database.interfaces import IBookRepository
-from database.models import Book, UserBook, Loan
 
 
 class BookRepository(IBookRepository):
     def __init__(self, db: AsyncSession):
         self._db = db
-
+    
+    async def get_by_id(self, book_id: uuid.UUID) -> Optional[Book]:
+        return await self._db.get(Book, book_id)
+    
+    async def get_by_isbn(self, isbn: str) -> Optional[Book]:
+        result = await self._db.execute(select(Book).where(Book.isbn == isbn))
+        return result.scalar_one_or_none()
+    
+    async def get_by_isbn_for_update(self, isbn: str) -> Optional[Book]:
+        result = await self._db.execute(select(Book).where(Book.isbn == isbn).with_for_update())
+        return result.scalar_one_or_none()
+    
+    async def get_by_id_with_owner(self, book_id: uuid.UUID) -> Optional[tuple[Book, UserBook, User]]:
+        result = await self._db.execute(
+            select(Book, UserBook, User)
+            .join(UserBook, Book.id == UserBook.book_id)
+            .join(User, UserBook.user_id == User.id)
+            .where(Book.id == book_id)
+            .limit(1)
+        )
+        return result.one_or_none()
+    
+    async def create(self, isbn: str, title: str, **kwargs) -> Book:
+        book = Book(isbn=isbn, title=title, **kwargs)
+        self._db.add(book)
+        await self._db.commit()
+        await self._db.refresh(book)
+        return book
+    
+    async def create_book_from_dict(self, book_data: dict) -> Book:
+        book = Book(**book_data)
+        self._db.add(book)
+        await self._db.commit()
+        await self._db.refresh(book)
+        return book
+    
+    async def update(self, book_id: uuid.UUID, book_data: Any) -> Optional[Book]:
+        book = await self._db.get(Book, book_id)
+        if not book:
+            return None
+        
+        if hasattr(book_data, 'model_dump'):
+            data = book_data.model_dump(exclude_unset=True)
+        else:
+            data = book_data
+            
+        for key, value in data.items():
+            if hasattr(book, key):
+                setattr(book, key, value)
+        
+        await self._db.commit()
+        await self._db.refresh(book)
+        return book
+    
+    async def update_cover_path(self, book_id: uuid.UUID, cover_path: str) -> None:
+        book = await self._db.get(Book, book_id)
+        if book:
+            book.cover_url = cover_path
+            await self._db.commit()
+    
+    async def delete(self, book_id: uuid.UUID) -> bool:
+        book = await self._db.get(Book, book_id)
+        if not book:
+            return False
+        
+        await self._db.delete(book)
+        await self._db.commit()
+        return True
+    
+    async def list_all(self, skip: int = 0, limit: int = 100) -> List[Book]:
+        result = await self._db.execute(select(Book).offset(skip).limit(limit))
+        return list(result.scalars().all())
+    
+    async def get_all(self) -> List[Book]:
+        result = await self._db.execute(select(Book))
+        return list(result.scalars().all())
+    
+    async def get_by_owner(self, owner_id: uuid.UUID, skip: int = 0, limit: int = 100) -> List[Book]:
+        result = await self._db.execute(
+            select(Book)
+            .join(UserBook, Book.id == UserBook.book_id)
+            .where(UserBook.user_id == owner_id)
+            .offset(skip)
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+    
+    async def get_multi(self, skip: int = 0, limit: int = 100) -> tuple[List[Book], int]:
+        count_result = await self._db.execute(select(func.count()).select_from(Book))
+        total = count_result.scalar() or 0
+        result = await self._db.execute(select(Book).offset(skip).limit(limit))
+        books = list(result.scalars().all())
+        return books, total
+    
+    async def get_multi_with_search(self, skip: int = 0, limit: int = 100, search: Optional[str] = None) -> tuple[List[Book], int]:
+        query = select(Book)
+        count_query = select(func.count()).select_from(Book)
+        
+        if search:
+            search_pattern = f"%{self._escape_like_pattern(search)}%"
+            search_filter = or_(
+                Book.title.ilike(search_pattern, escape="\\"),
+                Book.author.ilike(search_pattern, escape="\\"),
+                Book.isbn.ilike(search_pattern, escape="\\")
+            )
+            query = query.where(search_filter)
+            count_query = count_query.where(search_filter)
+        
+        query = query.order_by(Book.created_at.desc())
+        
+        count_result = await self._db.execute(count_query)
+        total = count_result.scalar() or 0
+        
+        result = await self._db.execute(query.offset(skip).limit(limit))
+        books = list(result.scalars().all())
+        return books, total
+    
     def _escape_like_pattern(self, pattern: str) -> str:
         return (
             pattern
@@ -18,61 +134,7 @@ class BookRepository(IBookRepository):
             .replace("%", "\\%")
             .replace("_", "\\_")
         )
-
-    async def get_by_id(self, id: uuid.UUID) -> Optional[Book]:
-        result = await self._db.execute(select(Book).where(Book.id == id))
-        return result.scalar_one_or_none()
-
-    async def get_by_isbn(self, isbn: str) -> Optional[Book]:
-        result = await self._db.execute(select(Book).where(Book.isbn == isbn))
-        return result.scalar_one_or_none()
-
-    async def get_by_isbn_for_update(self, isbn: str) -> Optional[Book]:
-        result = await self._db.execute(select(Book).where(Book.isbn == isbn).with_for_update())
-        return result.scalar_one_or_none()
-
-    async def create(self, isbn: str, title: str, **kwargs) -> Book:
-        book = Book(isbn=isbn, title=title, **kwargs)
-        self._db.add(book)
-        await self._db.commit()
-        await self._db.refresh(book)
-        return book
-
-    async def update(self, id: uuid.UUID, book_data: dict) -> Optional[Book]:
-        if hasattr(book_data, 'model_dump'):
-            data = book_data.model_dump(exclude_unset=True)
-        else:
-            data = book_data
-
-        result = await self._db.execute(
-            sa_update(Book)
-            .where(Book.id == id)
-            .values(**data)
-            .returning(Book)
-        )
-        await self._db.commit()
-        return result.scalar_one_or_none()
-
-    async def delete(self, id: uuid.UUID) -> bool:
-        book = await self.get_by_id(id)
-        if not book:
-            return False
-
-        await self._db.delete(book)
-        await self._db.commit()
-        return True
-
-    async def list_all(self, skip: int = 0, limit: int = 100) -> List[Book]:
-        result = await self._db.execute(select(Book).offset(skip).limit(limit))
-        return result.scalars().all()
-
-    async def get_multi(self, skip: int = 0, limit: int = 100) -> tuple[List[Book], int]:
-        count_result = await self._db.execute(select(func.count()).select_from(Book))
-        total = count_result.scalar() or 0
-        result = await self._db.execute(select(Book).offset(skip).limit(limit))
-        books = list(result.scalars().all())
-        return books, total
-
+    
     async def search(
         self,
         query: Optional[str] = None,
@@ -102,47 +164,128 @@ class BookRepository(IBookRepository):
 
         count_result = await self._db.execute(select(func.count()).select_from(base_query.subquery()))
         total = count_result.scalar() or 0
+        
         result = await self._db.execute(base_query.offset(skip).limit(limit))
         books = result.scalars().all()
         return list(books), total
-
-    async def get_multi_with_search(self, skip: int = 0, limit: int = 100, search: Optional[str] = None) -> tuple[List[Book], int]:
-        query = select(Book)
-        count_query = select(func.count()).select_from(Book)
+    
+    async def search_by_title(self, query: str) -> List[Book]:
+        result = await self._db.execute(select(Book).where(Book.title.ilike(f"%{query}%")))
+        return list(result.scalars().all())
+    
+    async def get_available_for_community(
+        self, 
+        exclude_user_id: Optional[uuid.UUID] = None, 
+        skip: int = 0, 
+        limit: int = 20,
+        status: Optional[str] = None,
+        search: Optional[str] = None,
+        author: Optional[str] = None
+    ) -> List[tuple[Book, UserBook, User]]:
+        status_filter = None if status == 'all' else (status if status else "available")
         
-        if search:
-            search_pattern = f"%{self._escape_like_pattern(search)}%"
-            search_filter = or_(
-                Book.title.ilike(search_pattern, escape="\\"),
-                Book.author.ilike(search_pattern, escape="\\"),
-                Book.isbn.ilike(search_pattern, escape="\\")
+        subquery_base = (
+            select(UserBook.book_id, func.min(UserBook.id).label('first_user_book_id'))
+            .where(UserBook.is_lendable.is_(True))
+        )
+        
+        if status_filter:
+            subquery_base = subquery_base.where(UserBook.status == status_filter)
+        
+        subquery = subquery_base.group_by(UserBook.book_id).subquery()
+        
+        query = (
+            select(Book, UserBook, User)
+            .join(UserBook, Book.id == UserBook.book_id)
+            .join(User, UserBook.user_id == User.id)
+            .join(subquery, (UserBook.book_id == subquery.c.book_id) & (UserBook.id == subquery.c.first_user_book_id)
             )
-            query = query.where(search_filter)
-            count_query = count_query.where(search_filter)
+        )
         
-        query = query.order_by(Book.created_at.desc())
-        
-        count_result = await self._db.execute(count_query)
-        total = count_result.scalar() or 0
+        if exclude_user_id:
+            query = query.where(UserBook.user_id != exclude_user_id)
+        if search:
+            search_term = f"%{search}%"
+            query = query.where(or_(Book.title.ilike(search_term), Book.author.ilike(search_term), Book.description.ilike(search_term)))
+        if author:
+            query = query.where(Book.author.ilike(f"%{author}%"))
         
         query = query.offset(skip).limit(limit)
         result = await self._db.execute(query)
-        books = list(result.scalars().all())
-        return books, total
-
+        return result.all()
+    
+    async def count_available_for_community(
+        self,
+        exclude_user_id: Optional[uuid.UUID] = None,
+        status: Optional[str] = None,
+        search: Optional[str] = None,
+        author: Optional[str] = None
+    ) -> int:
+        status_filter = None if status == 'all' else (status if status else "available")
+        
+        subquery_base = (
+            select(UserBook.book_id, func.min(UserBook.id).label('first_user_book_id'))
+            .where(UserBook.is_lendable.is_(True))
+        )
+        
+        if status_filter:
+            subquery_base = subquery_base.where(UserBook.status == status_filter)
+        
+        subquery = subquery_base.group_by(UserBook.book_id).subquery()
+        
+        query = (
+            select(func.count(Book.id))
+            .join(UserBook, Book.id == UserBook.book_id)
+            .join(User, UserBook.user_id == User.id)
+            .join(subquery, 
+                (UserBook.book_id == subquery.c.book_id) & 
+                (UserBook.id == subquery.c.first_user_book_id)
+            )
+        )
+        
+        if exclude_user_id:
+            query = query.where(UserBook.user_id != exclude_user_id)
+        if search:
+            search_term = f"%{search}%"
+            query = query.where(
+                or_(
+                    Book.title.ilike(search_term),
+                    Book.author.ilike(search_term),
+                    Book.description.ilike(search_term)
+                )
+            )
+        
+        if author:
+            query = query.where(Book.author.ilike(f"%{author}%"))
+        
+        result = await self._db.execute(query)
+        return result.scalar() or 0
+    
     async def count_all(self) -> int:
         result = await self._db.execute(select(func.count()).select_from(Book))
         return result.scalar() or 0
-
+    
     async def count_new_since(self, since: datetime) -> int:
         result = await self._db.execute(select(func.count()).select_from(Book).where(Book.created_at >= since))
         return result.scalar() or 0
-
+    
     async def get_book_stats(self, book_id: uuid.UUID) -> dict:
-        owners_count = await self._db.scalar(select(func.count(func.distinct(UserBook.user_id))).where(UserBook.book_id == book_id))
-        copies_count = await self._db.scalar(select(func.count()).select_from(UserBook).where(UserBook.book_id == book_id))
-        loans_count = await self._db.scalar(select(func.count()).select_from(Loan).join(UserBook, Loan.user_book_id == UserBook.id).where(UserBook.book_id == book_id))
-        active_loans_count = await self._db.scalar(select(func.count()).select_from(Loan).join(UserBook, Loan.user_book_id == UserBook.id).where(
+        owners_count = await self._db.scalar(
+            select(func.count(func.distinct(UserBook.user_id)))
+            .where(UserBook.book_id == book_id)
+        )
+        copies_count = await self._db.scalar(
+            select(func.count()).select_from(UserBook).where(UserBook.book_id == book_id)
+        )
+        loans_count = await self._db.scalar(
+            select(func.count()).select_from(Loan)
+            .join(UserBook, Loan.user_book_id == UserBook.id)
+            .where(UserBook.book_id == book_id)
+        )
+        active_loans_count = await self._db.scalar(
+            select(func.count()).select_from(Loan)
+            .join(UserBook, Loan.user_book_id == UserBook.id)
+            .where(
                 UserBook.book_id == book_id,
                 Loan.status == "active"
             )
@@ -153,7 +296,7 @@ class BookRepository(IBookRepository):
             "loans_count": loans_count or 0,
             "active_loans_count": active_loans_count or 0
         }
-
+    
     async def get_popular_books(self, days: int, limit: int = 10) -> List[dict]:
         from datetime import timezone, timedelta
         since = datetime.now(timezone.utc) - timedelta(days=days)
@@ -176,7 +319,7 @@ class BookRepository(IBookRepository):
             }
             for row in result.all()
         ]
-
+    
     async def get_daily_additions(self, days: int) -> List[dict]:
         from datetime import timezone, timedelta
         since = datetime.now(timezone.utc) - timedelta(days=days)
@@ -189,3 +332,65 @@ class BookRepository(IBookRepository):
         )
         result = await self._db.execute(stmt)
         return [{"date": str(row.date), "count": row.count} for row in result.all()]
+    
+    async def get_community_books(
+        self,
+        page: int = 1,
+        per_page: int = 20,
+        status: Optional[str] = None,
+        search: Optional[str] = None,
+        author: Optional[str] = None
+    ) -> Tuple[List[dict], int]:
+        skip = (page - 1) * per_page
+        
+        query = (select(Book, UserBook, User).join(UserBook, Book.id == UserBook.book_id).join(User, UserBook.user_id == User.id))
+        
+        if status and status != 'all':
+            query = query.where(UserBook.status == status)
+        
+        if search:
+            search_term = f"%{search}%"
+            query = query.where(
+                or_(
+                    Book.title.ilike(search_term),
+                    Book.author.ilike(search_term),
+                    Book.description.ilike(search_term)
+                )
+            )
+        
+        if author:
+            query = query.where(Book.author.ilike(f"%{author}%"))
+        
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await self._db.execute(count_query)
+        total = total_result.scalar() or 0
+        query = query.offset(skip).limit(per_page)
+        result = await self._db.execute(query)
+        results = result.all()
+        
+        seen_ids = set()
+        books = []
+        for book, user_book, owner in results:
+            book_id_str = str(book.id)
+            if book_id_str not in seen_ids:
+                seen_ids.add(book_id_str)
+                books.append({
+                    "id": book_id_str,
+                    "isbn": book.isbn,
+                    "title": book.title,
+                    "author": book.author,
+                    "description": book.description,
+                    "cover_url": f"/covers/{book.isbn}.jpg" if book.isbn else None,
+                    "genre": book.genre,
+                    "publication_year": book.publication_year,
+                    "status": user_book.status,
+                    "is_lendable": user_book.is_lendable,
+                    "owner_id": str(owner.id),
+                    "owner": {
+                        "id": str(owner.id),
+                        "first_name": owner.first_name or "",
+                        "last_name": owner.last_name or "",
+                        "location": owner.location
+                    }
+                })
+        return books, total

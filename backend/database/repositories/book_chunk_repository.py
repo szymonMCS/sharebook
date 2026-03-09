@@ -45,10 +45,7 @@ class BookChunkRepository(IBookChunkRepository):
         ]
     
     async def delete_by_book_id(self, book_id: UUID) -> None:
-        await self._db.execute(
-            text("DELETE FROM book_chunks WHERE book_id = :book_id"),
-            {"book_id": str(book_id)}
-        )
+        await self._db.execute(text("DELETE FROM book_chunks WHERE book_id = :book_id"), {"book_id": str(book_id)})
     
     async def add_chunk(self, chunk: BookChunk) -> None:
         self._db.add(chunk)
