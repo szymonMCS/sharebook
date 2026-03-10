@@ -4,7 +4,7 @@ import uuid
 from uuid import UUID
 from typing import Callable, Awaitable
 from database.interfaces import IBookRepository
-from src.schemas.book import BookCreate, BookUpdate, BookResponse, OwnerInfo
+from src.schemas.book import BookCreate, BookUpdate, BookResponse, CommunityBookResponse, OwnerInfo
 from src.core.exceptions import (
     NotFoundException,
     BookNotFoundException,
@@ -152,7 +152,7 @@ class BookService(IBookService):
         status: str | None = None,
         search: str | None = None,
         author: str | None = None
-    ) -> list[BookResponse]:
+    ) -> list[CommunityBookResponse]:
         book_tuples = await self._repo.get_available_for_community(
             exclude_user_id=user_id,
             skip=skip, 
@@ -163,7 +163,7 @@ class BookService(IBookService):
         )
         result = []
         for book, user_book, owner in book_tuples:
-            result.append(BookResponse(
+            result.append(CommunityBookResponse(
                 id=book.id,
                 isbn=book.isbn,
                 title=book.title,
@@ -179,6 +179,7 @@ class BookService(IBookService):
                 owner=OwnerInfo(id=owner.id, first_name=owner.first_name, last_name=owner.last_name, location=owner.location),
                 status=user_book.status,
                 condition=user_book.condition,
+                is_lendable=user_book.is_lendable,
                 created_at=book.created_at,
                 updated_at=book.updated_at,
             ))
