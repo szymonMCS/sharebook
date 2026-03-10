@@ -34,3 +34,24 @@ logs/
 
 # Tests
 tests/
+
+# Node.js / Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Frontend build
+dist/
+dist-ssr/
+build/
+*.local
+
+# Vite
+.vite/
+*.timestamp-*.mjs
+
+# TypeScript
+*.tsbuildinfo
