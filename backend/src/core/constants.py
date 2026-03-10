@@ -1,5 +1,6 @@
 from datetime import timedelta
 from src.config import settings
+from enum import StrEnum
 
 # BEZPIECZEŃSTWO - Tokeny i cookies
 
@@ -42,13 +43,29 @@ LOAN_DURATION_DAYS = 14
 DEFAULT_PAGE_SIZE = 20
 MAX_PAGE_SIZE = 100
 
+# PLACEHOLDERS - Tymczasowe wartości dla encji oczekujących na wzbogacenie
+
+PLACEHOLDER_TITLE = "Wczytywanie..."
+
 # STATUSY - Dostępne wartości dla encji
 
-LOAN_STATUSES = ["active", "returned", "overdue"]
-LOAN_REQUEST_STATUSES = ["pending", "accepted", "rejected", "cancelled"]
-USER_BOOK_STATUSES = ["available", "reserved", "borrowed", "unavailable", "lent"]
-BOOK_CONDITIONS = ["new", "good", "fair", "poor"]
-MESSAGE_TYPES = ["text", "system"]
+
+class LoanStatus(StrEnum):
+    ACTIVE = "active"
+    RETURNED = "returned"
+    OVERDUE = "overdue"
+
+
+class LoanRequestStatus(StrEnum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    CANCELLED = "cancelled"
+
+
+class MessageType(StrEnum):
+    TEXT = "text"
+    SYSTEM = "system"
 
 # IMPORTY - Walidacja ISBN
 
@@ -82,6 +99,7 @@ ERROR_INACTIVE_USER = "User account is inactive"
 ERROR_INVALID_TOKEN = "Invalid authentication token"
 ERROR_MISSING_TOKEN = "Authentication token missing"
 ERROR_INVALID_CREDENTIALS = "Invalid email or password"
+ERROR_TOKEN_REVOKED = "Token has been revoked"
 
 # KOMUNIKATY SUKCESU
 

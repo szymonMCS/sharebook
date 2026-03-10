@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any
 import bcrypt
 import secrets
@@ -29,8 +29,15 @@ def get_csrf_cookie_config() -> dict[str, Any]:
         "samesite": "lax",
     }
 
+class PasswordTooLongError(Exception):
+    pass
+
+
 def _to_bytes(text: str) -> bytes:
-    return text.encode('utf-8')[:72]
+    encoded = text.encode('utf-8')
+    if len(encoded) > 72:
+        raise PasswordTooLongError("Password exceeds 72 bytes limit. Please use a shorter password.")
+    return encoded
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(_to_bytes(plain_password), hashed_password.encode('utf-8'))
@@ -44,6 +51,8 @@ def generate_csrf_token() -> str:
 def verify_csrf_token(token: str, cookie_token: str) -> bool:
     if not token or not cookie_token:
         return False
+    if len(token.encode('utf-8')) < 32 or len(cookie_token.encode('utf-8')) < 32:
+        return False
     return secrets.compare_digest(token, cookie_token)
 
 def create_access_token(data: dict[str, Any]) -> str:
@@ -55,7 +64,6 @@ def create_access_token(data: dict[str, Any]) -> str:
         "iat": now,
         "type": "access"
     })
-    
     return jwt.encode(
         to_encode,
         settings.SECRET_KEY,
@@ -71,7 +79,6 @@ def create_refresh_token(data: dict[str, Any]) -> str:
         "iat": now,
         "type": "refresh"
     })
-    
     return jwt.encode(
         to_encode,
         settings.SECRET_KEY,

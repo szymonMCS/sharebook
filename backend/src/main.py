@@ -4,8 +4,12 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from database.config import init_db, close_db
 from src.api.v1.router import api_router
+from src.services.cover import get_cover_service
 from src.config import settings
 from src.core.exceptions import ShareBookException
 from src.core.response import APIResponse
@@ -33,7 +37,16 @@ async def lifespan(app: FastAPI):
     await close_db()
     print("Database connections closed")
     
+    try:
+        cover_service = await get_cover_service()
+        await cover_service.close()
+        print("Cover service connections closed")
+    except Exception as e:
+        logger.warning(f"Error closing cover service: {e}")
+    
     print("Goodbye!")
+
+limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
     title="ShareBook API",
@@ -46,6 +59,8 @@ app = FastAPI(
     redoc_url="/redoc",  
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -59,33 +74,42 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix="/api/v1")
-
 app.mount("/covers", StaticFiles(directory=settings.COVERS_PATH), name="covers")
 
 @app.exception_handler(ShareBookException)
 async def sharebook_exception_handler(request: Request, exc: ShareBookException):
-    """Globalny handler dla wyjątków ShareBookException."""
     logger.warning(f"ShareBookException: {exc.code} - {exc.message}")
+    headers = {}
+    if exc.status_code == 401:
+        headers["WWW-Authenticate"] = "Bearer"
     return JSONResponse(
         status_code=exc.status_code,
+        headers=headers,
         content=APIResponse.error(
             message=exc.message,
             meta={"code": exc.code, "details": exc.details}
         ).model_dump()
     )
 
-
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
-    """Globalny handler dla nieobsłużonych wyjątków."""
     logger.exception(f"Unhandled exception: {exc}")
     return JSONResponse(
         status_code=500,
         content=APIResponse.error(
-            message="Internal server error" if not settings.DEBUG else str(exc)
+            message="Internal server error"
         ).model_dump()
     )
 
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    logger.warning(f"Rate limit exceeded: {request.client.host}")
+    return JSONResponse(
+        status_code=429,
+        content=APIResponse.error(
+            message="Too many login attempts. Please try again later."
+        ).model_dump()
+    )
 
 @app.get("/")
 async def root():

@@ -16,7 +16,6 @@ from database.repositories.user_book_repository import UserBookRepository
 from database.repositories.loan_repository import LoanRepository
 from database.repositories.loan_request_repository import LoanRequestRepository
 from database.repositories.message_repository import MessageRepository
-from database.repositories.book_chunk_repository import BookChunkRepository
 from src.services.auth import AuthService, CookieService, TokenService
 from src.services.books import BookService, GoogleBooksService
 from src.services.loans import LoanService, LoanRequestService
@@ -49,8 +48,6 @@ class RepositoryFactory(IRepositoryFactory):
         return LoanRequestRepository(self._db)
     def create_message_repository(self):
         return MessageRepository(self._db)
-    def create_book_chunk_repository(self):
-        return BookChunkRepository(self._db)
 
 
 class ServiceFactory(IServiceFactory):

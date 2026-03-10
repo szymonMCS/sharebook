@@ -6,7 +6,7 @@ asyncpg
 pgvector
 python-jose[cryptography]
 bcrypt
-slowapi
+slowapi==0.1.9
 zxcvbn
 structlog
 pydantic
