@@ -2,16 +2,15 @@ from pydantic import BaseModel, Field, ConfigDict, computed_field
 from datetime import datetime, date
 from uuid import UUID
 from typing import Optional, List
-from src.core.constants import LOAN_STATUSES, LOAN_REQUEST_STATUSES, MESSAGE_TYPES
+from src.core.constants import LoanStatus, LoanRequestStatus, MessageType
 
 
 class LoanBase(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    status: str = Field(
-        default="active",
-        pattern=f"^({'|'.join(LOAN_STATUSES)})$",
-        description=f"Status wypozyczenia: {', '.join(LOAN_STATUSES)}"
+    status: LoanStatus = Field(
+        default=LoanStatus.ACTIVE,
+        description=f"Status wypozyczenia: {', '.join(s.value for s in LoanStatus)}"
     )
 
 
@@ -75,7 +74,6 @@ class LentBookResponse(BaseModel):
     @computed_field
     @property
     def days_remaining(self) -> int:
-        """Oblicz dni pozostałe do zwrotu."""
         today = date.today()
         due = self.due_date.date() if isinstance(self.due_date, datetime) else self.due_date
         return (due - today).days
@@ -92,7 +90,7 @@ class LoanRequestBase(BaseModel):
 
 
 class LoanRequestCreate(LoanRequestBase):
-    pass
+    user_book_id: UUID = Field(..., description="ID książki użytkownika do wypożyczenia")
 
 
 class LoanRequestResponse(LoanRequestBase):
@@ -102,10 +100,9 @@ class LoanRequestResponse(LoanRequestBase):
     user_book_id: UUID
     requester_id: UUID
     owner_id: UUID
-    status: str = Field(
+    status: LoanRequestStatus = Field(
         ...,
-        pattern=f"^({'|'.join(LOAN_REQUEST_STATUSES)})$",
-        description=f"Status prosby: {', '.join(LOAN_REQUEST_STATUSES)}"
+        description=f"Status prosby: {', '.join(s.value for s in LoanRequestStatus)}"
     )
     rejection_reason: Optional[str] = None
     created_at: datetime
@@ -128,22 +125,28 @@ class RejectRequestRequest(BaseModel):
     )
 
 
+class LoanRequestAction(BaseModel):
+    action: str = Field(..., pattern="^(accept|reject)$", description="Akcja do wykonania: accept lub reject")
+    reason: Optional[str] = Field(None, max_length=500, description="Powód odrzucenia (wymagany tylko dla action=reject)")
+
+
+class LoanRequestUpdate(BaseModel):
+    message: Optional[str] = Field(None, max_length=1000, description="Nowa wiadomość do właściciela książki")
+
+
+class LoanUpdate(BaseModel):
+    status: str = Field(..., pattern="^(returned)$", description="Nowy status wypożyczenia: returned")
+
+
 class LoanRequestsSummary(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-
     incoming_pending: int
     outgoing_pending: int
 
 
 class MessageCreate(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    
-    content: str = Field(
-        ...,
-        min_length=1,
-        max_length=2000,
-        description="Treść wiadomości"
-    )
+    content: str = Field(..., min_length=1, max_length=2000, description="Treść wiadomości")
 
 
 class MessageResponse(BaseModel):
@@ -155,22 +158,22 @@ class MessageResponse(BaseModel):
     sender_name: str  # Denormalizacja
     sender_avatar: Optional[str] = None  # Denormalizacja
     content: str
-    message_type: str = Field(
+    message_type: MessageType = Field(
         ...,
-        pattern=f"^({'|'.join(MESSAGE_TYPES)})$",
-        description=f"Typ wiadomości: {', '.join(MESSAGE_TYPES)}"
+        description=f"Typ wiadomości: {', '.join(t.value for t in MessageType)}"
     )
     is_read: bool
     created_at: datetime
+    updated_at: datetime
 
 
 class MessageThreadResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
     
     loan_request_id: UUID
-    user_book_id: UUID  # Nasza architektura M:N używa user_book_id zamiast book_id
+    user_book_id: UUID
     book_title: str
-    status: str  # Status prośby (pending, accepted, etc.)
+    status: str
     messages: List[MessageResponse]
     total_messages: int
     unread_count: int

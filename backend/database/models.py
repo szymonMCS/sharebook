@@ -9,9 +9,10 @@ from sqlalchemy import (
     ForeignKey,
     DateTime,
     UniqueConstraint,
+    JSON,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from pgvector.sqlalchemy import Vector  # Import dla pgvector
+from pgvector.sqlalchemy import Vector
 from database.config import Base
 
 
@@ -22,15 +23,16 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4, index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[str] = mapped_column(String(50), default="reader", nullable=False)
+    role: Mapped[str] = mapped_column(String(50), default="reader", nullable=False, index=True)
     first_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     last_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     location: Mapped[str] = mapped_column(String(200), nullable=False)
     phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False       )
+    is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc),nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     
     user_books: Mapped[List["UserBook"]] = relationship("UserBook", back_populates="user", cascade="all, delete-orphan")
     borrowed_loans: Mapped[List["Loan"]] = relationship("Loan", foreign_keys="Loan.borrower_id", back_populates="borrower")
@@ -53,7 +55,7 @@ class Book(Base):
     title: Mapped[str] = mapped_column(Text, nullable=False, index=True)
     author: Mapped[Optional[str]] = mapped_column(Text, nullable=True, index=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    cover_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    cover_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     publisher: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     publication_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     page_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
@@ -76,7 +78,7 @@ class UserBook(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4, index=True)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("books.id", ondelete="CASCADE"), nullable=False, index=True)
-    status: Mapped[str] = mapped_column(String(50), default="available", nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="available", nullable=False, index=True)
     condition: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     is_lendable: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
@@ -84,11 +86,7 @@ class UserBook(Base):
     
     user: Mapped["User"] = relationship("User", back_populates="user_books")
     book: Mapped["Book"] = relationship("Book", back_populates="user_books")
-    active_loan: Mapped[Optional["Loan"]] = relationship(
-        "Loan",
-        back_populates="user_book",
-        uselist=False
-    )
+    active_loan: Mapped[Optional["Loan"]] = relationship("Loan", back_populates="user_book", uselist=False)
     
     def __repr__(self) -> str:
         return f"<UserBook(id={self.id}, book_id={self.book_id}, status={self.status}, condition={self.condition})>"
@@ -102,9 +100,9 @@ class Loan(Base):
     user_book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user_books.id", ondelete="CASCADE"), nullable=False, index=True)
     borrower_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     lender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    status: Mapped[str] = mapped_column(String(50), default="active", nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="active", nullable=False, index=True)
     loan_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    due_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    due_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     return_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
@@ -125,7 +123,7 @@ class LoanRequest(Base):
     user_book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user_books.id", ondelete="CASCADE"), nullable=False, index=True)
     requester_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    status: Mapped[str] = mapped_column(String(50), default="pending", nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="pending", nullable=False, index=True)
     message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     rejection_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
@@ -148,8 +146,8 @@ class Message(Base):
     sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     message_type: Mapped[str] = mapped_column(String(50), default="text", nullable=False)
-    is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     
     loan_request: Mapped["LoanRequest"] = relationship("LoanRequest", back_populates="messages")
