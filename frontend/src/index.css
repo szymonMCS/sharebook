@@ -1,0 +1,185 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 33% 97%;
+    --foreground: 30 8% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 30 8% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 30 8% 15%;
+    --primary: 38 35% 63%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 40 25% 94%;
+    --secondary-foreground: 30 8% 15%;
+    --muted: 40 20% 94%;
+    --muted-foreground: 30 5% 40%;
+    --accent: 38 35% 63%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 40 15% 88%;
+    --input: 40 15% 88%;
+    --ring: 38 35% 63%;
+    --radius: 0.625rem;
+    --sidebar-background: 40 33% 97%;
+    --sidebar-foreground: 30 8% 15%;
+    --sidebar-primary: 38 35% 63%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 40 25% 94%;
+    --sidebar-accent-foreground: 30 8% 15%;
+    --sidebar-border: 40 15% 88%;
+    --sidebar-ring: 38 35% 63%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-warm-beige text-book-brown font-sans antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif font-semibold tracking-tight;
+  }
+  
+  h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl;
+  }
+  
+  h2 {
+    @apply text-3xl md:text-4xl;
+  }
+  
+  h3 {
+    @apply text-2xl md:text-3xl;
+  }
+  
+  h4 {
+    @apply text-xl md:text-2xl;
+  }
+}
+
+@layer components {
+  .book-card {
+    @apply bg-white rounded-xl shadow-book border border-stone-200/60 overflow-hidden transition-all duration-300;
+  }
+  
+  .book-card:hover {
+    @apply shadow-book-hover -translate-y-2;
+  }
+  
+  .btn-primary {
+    @apply bg-book-gold text-white px-6 py-3 rounded-full font-medium transition-all duration-300 hover:bg-book-gold-hover hover:shadow-lg hover:shadow-book-gold/25;
+  }
+  
+  .btn-secondary {
+    @apply border-2 border-book-brown text-book-brown px-6 py-3 rounded-full font-medium transition-all duration-300 hover:bg-book-brown hover:text-white;
+  }
+  
+  .section-padding {
+    @apply px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16;
+  }
+  
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-md rounded-xl border border-white/20 shadow-lg;
+  }
+  
+  .text-gradient {
+    @apply bg-gradient-to-r from-book-gold to-book-brown bg-clip-text text-transparent;
+  }
+  
+  .status-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  
+  .status-available {
+    @apply bg-green-100 text-green-800;
+  }
+  
+  .status-reserved {
+    @apply bg-amber-100 text-amber-800;
+  }
+  
+  .status-borrowed {
+    @apply bg-blue-100 text-blue-800;
+  }
+  
+  .status-unavailable {
+    @apply bg-gray-100 text-gray-800;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #C4A77D;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #B3966A;
+}
+
+/* Selection color */
+::selection {
+  background: rgba(196, 167, 125, 0.3);
+  color: #2D2A26;
+}
