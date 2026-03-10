@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional, List, Any, Tuple
-from sqlalchemy import select, or_, func, update as sa_update
+from sqlalchemy import select, or_, func, update as sa_update, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.models import Book, UserBook, User, Loan
 from database.interfaces import IBookRepository
@@ -182,11 +182,21 @@ class BookRepository(IBookRepository):
         search: Optional[str] = None,
         author: Optional[str] = None
     ) -> List[tuple[Book, UserBook, User]]:
-        status_filter = None if status == 'all' else (status if status else "available")
+        # Only show these statuses in community (exclude unavailable and lent)
+        allowed_statuses = ['available', 'reserved', 'borrowed']
+        
+        if status == 'all' or not status:
+            status_filter = None  # Will filter by allowed_statuses below
+        elif status in allowed_statuses:
+            status_filter = status
+        else:
+            # Invalid status for community, return empty
+            return []
         
         subquery_base = (
-            select(UserBook.book_id, func.min(UserBook.id).label('first_user_book_id'))
+            select(UserBook.book_id, func.min(UserBook.id.cast(String)).label('first_user_book_id'))
             .where(UserBook.is_lendable.is_(True))
+            .where(UserBook.status.in_(allowed_statuses))
         )
         
         if status_filter:
@@ -198,8 +208,7 @@ class BookRepository(IBookRepository):
             select(Book, UserBook, User)
             .join(UserBook, Book.id == UserBook.book_id)
             .join(User, UserBook.user_id == User.id)
-            .join(subquery, (UserBook.book_id == subquery.c.book_id) & (UserBook.id == subquery.c.first_user_book_id)
-            )
+            .join(subquery, (UserBook.book_id == subquery.c.book_id) & (UserBook.id.cast(String) == subquery.c.first_user_book_id))
         )
         
         if exclude_user_id:
@@ -221,11 +230,20 @@ class BookRepository(IBookRepository):
         search: Optional[str] = None,
         author: Optional[str] = None
     ) -> int:
-        status_filter = None if status == 'all' else (status if status else "available")
+        # Only show these statuses in community (exclude unavailable and lent)
+        allowed_statuses = ['available', 'reserved', 'borrowed']
+        
+        if status == 'all' or not status:
+            status_filter = None
+        elif status in allowed_statuses:
+            status_filter = status
+        else:
+            return 0
         
         subquery_base = (
-            select(UserBook.book_id, func.min(UserBook.id).label('first_user_book_id'))
+            select(UserBook.book_id, func.min(UserBook.id.cast(String)).label('first_user_book_id'))
             .where(UserBook.is_lendable.is_(True))
+            .where(UserBook.status.in_(allowed_statuses))
         )
         
         if status_filter:
@@ -239,7 +257,7 @@ class BookRepository(IBookRepository):
             .join(User, UserBook.user_id == User.id)
             .join(subquery, 
                 (UserBook.book_id == subquery.c.book_id) & 
-                (UserBook.id == subquery.c.first_user_book_id)
+                (UserBook.id.cast(String) == subquery.c.first_user_book_id)
             )
         )
         

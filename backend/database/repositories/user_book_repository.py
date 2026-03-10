@@ -1,6 +1,6 @@
 import uuid
 from typing import Optional, List, Tuple
-from sqlalchemy import select, and_, func, or_
+from sqlalchemy import select, and_, func, or_, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from database.models import UserBook, Book, User
@@ -164,7 +164,7 @@ class UserBookRepository(IUserBookRepository):
     
     def _build_community_subquery(self, status: Optional[str] = None):
         subquery_base = (
-            select(UserBook.book_id, func.min(UserBook.id).label('first_user_book_id'))
+            select(UserBook.book_id, func.min(UserBook.id.cast(String)).label('first_user_book_id'))
             .where(UserBook.is_lendable.is_(True))
         )
 
@@ -178,8 +178,7 @@ class UserBookRepository(IUserBookRepository):
             query
             .join(UserBook, Book.id == UserBook.book_id)
             .join(User, UserBook.user_id == User.id)
-            .join(subquery,(UserBook.book_id == subquery.c.book_id) & (UserBook.id == subquery.c.first_user_book_id)
-            )
+            .join(subquery, (UserBook.book_id == subquery.c.book_id) & (UserBook.id.cast(String) == subquery.c.first_user_book_id))
         )
 
         if exclude_user_id:
