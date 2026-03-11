@@ -66,7 +66,7 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     const res = await authApi.login(email, password);
     if (!res.success || !res.data?.user) {
-      throw new Error(res.error || 'Invalid credentials');
+      throw new Error(res.error || 'Nieprawidłowy email lub hasło');
     }
     // Token is automatically set in HTTP-only cookie by backend
     setUser(res.data.user);
@@ -75,7 +75,7 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
   const register = async (data: { email: string; password: string; first_name: string; last_name: string; location?: string; phone?: string }) => {
     const res = await authApi.register(data);
     if (!res.success || !res.data?.user) {
-      throw new Error(res.error || 'Registration failed');
+      throw new Error(res.error || 'Rejestracja nie powiodła się');
     }
     // Token is automatically set in HTTP-only cookie by backend
     setUser(res.data.user);
@@ -238,7 +238,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error('useAuth musi być użyte wewnątrz AuthProvider');
   }
   return context;
 }

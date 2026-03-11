@@ -36,8 +36,8 @@ export const authApi = {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Login failed' }));
-      throw new Error(error.error || error.detail || 'Login failed');
+      const error = await response.json().catch(() => ({ error: 'Logowanie nie powiodło się' }));
+      throw new Error(error.error || error.detail || 'Logowanie nie powiodło się');
     }
 
     return response.json();

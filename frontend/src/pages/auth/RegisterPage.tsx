@@ -118,11 +118,18 @@ export function RegisterPage() {
       if (err.message) {
         // Konwersja komunikatów błędów z backendu na polskie
         const backendError = err.message.toLowerCase();
-        if (backendError.includes('email already exists') || backendError.includes('duplicate')) {
+        if (backendError.includes('already registered') || backendError.includes('already exists') || backendError.includes('duplicate')) {
           setError('Użytkownik z tym adresem email już istnieje');
-        } else if (backendError.includes('validation')) {
-          setError('Nieprawidłowe dane. Sprawdź wprowadzone informacje');
+        } else if (backendError.includes('password too weak') || backendError.includes('weak password')) {
+          setError('Hasło jest za słabe. Użyj silniejszego hasła (min. 8 znaków, wielka litera, cyfra, znak specjalny)');
+        } else if (backendError.includes('invalid email')) {
+          setError('Nieprawidłowy adres email');
+        } else if (backendError.includes('validation') || backendError.includes('field required')) {
+          setError('Nieprawidłowe dane. Sprawdź wprowadzone informacje i uzupełnij wszystkie wymagane pola');
+        } else if (backendError.includes('internal server error')) {
+          setError('Wystąpił błąd serwera. Spróbuj ponownie później');
         } else {
+          // Jeśli nie znamy błędu, wyświetl go bezpośrednio (może być już po polsku)
           setError(err.message);
         }
       } else {
