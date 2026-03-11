@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, List, Any, Tuple
 from sqlalchemy import select, or_, func, update as sa_update, String
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.models import Book, UserBook, User, Loan
 from database.interfaces import IBookRepository
@@ -412,3 +413,27 @@ class BookRepository(IBookRepository):
                     }
                 })
         return books, total
+
+
+    async def enrich_book(self, book_id: uuid.UUID, enrichment_data: dict) -> Optional[Book]:
+        book = await self.get_by_id(book_id)
+        if not book:
+            return None
+        
+        for key, value in enrichment_data.items():
+            if hasattr(book, key) and value is not None:
+                setattr(book, key, value)
+        
+        await self._db.commit()
+        await self._db.refresh(book)
+        return book
+    
+    async def get_with_owners(self, book_id: uuid.UUID) -> Optional[Book]:
+        result = await self._db.execute(
+            select(Book)
+            .where(Book.id == book_id)
+            .options(
+                selectinload(Book.user_books).selectinload(UserBook.user)
+            )
+        )
+        return result.scalar_one_or_none()

@@ -29,7 +29,7 @@ class AuthService(IAuthService):
             role=user.role,
             location=user.location
         )
-        db_user = await self._repo.create(
+        db_user = await self._repo.create_user(
             email=internal_data.email,
             hashed_password=internal_data.hashed_password,
             first_name=internal_data.first_name,
@@ -74,7 +74,8 @@ class AuthService(IAuthService):
         if not existing:
             raise NotFoundException("User", str(user_id))
         
-        updated = await self._repo.update(user_id, data)
+        update_dict = data.model_dump(exclude_unset=True)
+        updated = await self._repo.update(existing, update_dict)
         
         logger.info(f"User profile updated: {user_id}")
         
