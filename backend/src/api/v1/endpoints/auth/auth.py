@@ -36,7 +36,7 @@ async def register(
     access_token, refresh_token, csrf_token = token_service.generate_token_pair(user.id)
     cookie_service = CookieService()
     cookie_service.set_auth_cookies(response, access_token, refresh_token, csrf_token)
-    return APIResponse.ok(data={"user": user.model_dump()}, message=MSG_REGISTER_SUCCESS)
+    return APIResponse.ok(data={"user": user.model_dump()}, message=MSG_REGISTER_SUCCESS).model_dump()
 
 @router.post("/login", response_model=dict)
 @limiter.limit("5/minute")
@@ -55,7 +55,7 @@ async def login(
     access_token, refresh_token, csrf_token = token_service.generate_token_pair(user.id)
     cookie_service = CookieService()
     cookie_service.set_auth_cookies(response, access_token, refresh_token, csrf_token)
-    return APIResponse.ok(data={"user": user.model_dump()}, message=MSG_LOGIN_SUCCESS)
+    return APIResponse.ok(data={"user": user.model_dump()}, message=MSG_LOGIN_SUCCESS).model_dump()
 
 
 @router.post("/logout", status_code=HTTP_204_NO_CONTENT)
@@ -79,4 +79,4 @@ async def refresh(response: Response, request: Request, token_service: ITokenSer
 
     cookie_service = CookieService()
     cookie_service.set_refresh_cookies(response, new_access_token, new_csrf_token)
-    return APIResponse.ok(message=MSG_TOKEN_REFRESHED)
+    return APIResponse.ok(message=MSG_TOKEN_REFRESHED).model_dump()
