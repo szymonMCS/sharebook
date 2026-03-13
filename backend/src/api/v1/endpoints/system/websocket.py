@@ -43,7 +43,6 @@ async def book_covers_websocket(websocket: WebSocket) -> None:
                         await manager.handle_unsubscribe(book_id, websocket)
                     case _:
                         await manager._broadcaster.send_personal(websocket, {"type": "error", "message": f"Unknown action: {action}"})
-
             except WebSocketDisconnect:
                 logger.info("WebSocket disconnected")
                 break
@@ -54,7 +53,7 @@ async def book_covers_websocket(websocket: WebSocket) -> None:
                 logger.error(f"WebSocket error: {e}")
                 break
     finally:
-        manager.disconnect(websocket)
+        await manager.disconnect(websocket)
 
 
 async def notify_cover_status(book_id: str, status: str, cover_url: str | None = None) -> int:
@@ -67,10 +66,16 @@ async def notify_cover_status(book_id: str, status: str, cover_url: str | None =
         message["cover_url"] = cover_url
     return await manager.broadcast_to_book(book_id, message)
 
-
 async def notify_cover_updated(book_id: str, cover_url: str) -> int:
     return await manager.broadcast_to_book(book_id, {
         "type": "cover_updated",
         "book_id": book_id,
         "cover_url": cover_url,
+    })
+
+async def notify_book_enriched(book_id: str, book_data: dict) -> int:
+    return await manager.broadcast_to_book(book_id, {
+        "type": "book_enriched",
+        "book_id": book_id,
+        "book_data": book_data,
     })

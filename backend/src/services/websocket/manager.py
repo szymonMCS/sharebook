@@ -22,25 +22,25 @@ class WebSocketManager:
         logger.info(f"WebSocket connected. Total: {self._registry.get_count()}")
         await self._send_welcome(websocket)
 
-    def disconnect(self, websocket: WebSocket) -> None:
+    async def disconnect(self, websocket: WebSocket) -> None:
         self._subscriptions.unsubscribe_all(websocket)
-        self._registry.unregister(websocket)
+        await self._registry.unregister(websocket)
         logger.info(f"WebSocket disconnected. Remaining: {self._registry.get_count()}")
 
-    def subscribe(self, book_id: str, websocket: WebSocket) -> bool:
+    async def subscribe(self, book_id: str, websocket: WebSocket) -> bool:
         try:
             UUID(book_id)
         except (ValueError, TypeError):
             logger.warning(f"Invalid book_id: {book_id}")
             return False
 
-        if self._subscriptions.subscribe(book_id, websocket):
+        if await self._subscriptions.subscribe(book_id, websocket):
             self._registry.subscribe_to_book(websocket, book_id)
             return True
         return False
 
-    def unsubscribe(self, book_id: str, websocket: WebSocket) -> bool:
-        if self._subscriptions.unsubscribe(book_id, websocket):
+    async def unsubscribe(self, book_id: str, websocket: WebSocket) -> bool:
+        if await self._subscriptions.unsubscribe(book_id, websocket):
             self._registry.unsubscribe_from_book(websocket, book_id)
             return True
         return False
@@ -54,7 +54,7 @@ class WebSocketManager:
             await self._broadcaster.send_personal(websocket, {"type": "error", "message": "book_id required"})
             return
 
-        if self.subscribe(book_id, websocket):
+        if await self.subscribe(book_id, websocket):
             await self._broadcaster.send_personal(websocket, {"type": "subscribed", "book_id": book_id})
         else:
             await self._broadcaster.send_personal(websocket, {"type": "error", "message": f"Already subscribed to {book_id}"})
@@ -64,7 +64,7 @@ class WebSocketManager:
             await self._broadcaster.send_personal(websocket, {"type": "error", "message": "book_id required"})
             return
 
-        if self.unsubscribe(book_id, websocket):
+        if await self.unsubscribe(book_id, websocket):
             await self._broadcaster.send_personal(websocket, {"type": "unsubscribed", "book_id": book_id})
         else:
             await self._broadcaster.send_personal(websocket, {"type": "error", "message": f"Not subscribed to {book_id}"})

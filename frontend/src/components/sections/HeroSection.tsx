@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, BookOpen, Sparkles, Users, Library } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuthStore } from '@/store/appStore';
+import { useAuth } from '@/components/auth/AuthContext';
 
 // Floating book icon component
 function FloatingIcon({ 
@@ -47,7 +47,7 @@ function StatCounter({
 }
 
 export function HeroSection() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated } = useAuth();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {

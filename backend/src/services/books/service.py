@@ -37,13 +37,13 @@ class BookService(IBookService):
             )
         return BookResponse.model_validate(db_book)
 
-    async def get_book(self, book_id: UUID) -> BookResponse:
+    async def get_book(self, book_id: UUID) -> CommunityBookResponse:
         result = await self._repo.get_by_id_with_owner(book_id)
         if not result:
             raise NotFoundException("Book", str(book_id))
         
         book, user_book, owner = result
-        return BookResponse(
+        return CommunityBookResponse(
             id=book.id,
             isbn=book.isbn,
             title=book.title,
@@ -59,6 +59,7 @@ class BookService(IBookService):
             owner=OwnerInfo(id=owner.id, first_name=owner.first_name, last_name=owner.last_name, location=owner.location),
             status=user_book.status,
             condition=user_book.condition,
+            is_lendable=user_book.is_lendable,
             created_at=book.created_at,
             updated_at=book.updated_at,
         )
@@ -201,7 +202,6 @@ class BookService(IBookService):
         
         db_book = await self._repo.create_book_from_dict(book_data)
         logger.info(f"Book created: {db_book.id} by user {user_id}")
-        
         if self._vector_sync:
             await self._vector_sync(db_book.id, db_book.title, db_book.author, db_book.description)
         return BookResponse.model_validate(db_book)
@@ -215,13 +215,10 @@ class BookService(IBookService):
         
         update_data = BookUpdate(is_lendable=is_lendable)
         updated = await self._repo.update(book_id, update_data)
-        
         logger.info(f"Book lendable status updated: {book_id} to {is_lendable} by user {user_id}")
-        
         return BookResponse.model_validate(updated)
 
     async def get_by_isbn(self, isbn: str) -> BookResponse | None:
-        """Get book by ISBN."""
         book = await self._repo.get_by_isbn(isbn)
         if not book:
             return None
@@ -235,7 +232,6 @@ class BookService(IBookService):
         skip: int = 0,
         limit: int = 20
     ) -> tuple[list[BookResponse], int]:
-        """Search books with filters and pagination."""
         books, total = await self._repo.search(
             query=query,
             author=author,

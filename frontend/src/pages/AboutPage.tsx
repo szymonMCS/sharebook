@@ -2,8 +2,10 @@ import { Navbar } from '@/components/layout/Navbar';
 import { FloatingBooks, GradientOrbs } from '@/components/layout/FloatingBooks';
 import { Footer } from '@/components/layout/Footer';
 import { BookOpen, Users, Sparkles, Heart, Shield, Globe } from 'lucide-react';
+import { useAuth } from '@/components/auth/AuthContext';
 
 export function AboutPage() {
+  const { isAuthenticated } = useAuth();
   const values = [
     {
       icon: Users,
@@ -44,7 +46,7 @@ export function AboutPage() {
       <Navbar />
       
       <main className="relative z-10 pt-20">
-        {/* Hero Section */}
+
         <section className="py-20 lg:py-32">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h1 className="font-serif text-4xl md:text-6xl font-bold text-book-brown mb-6">
@@ -58,7 +60,7 @@ export function AboutPage() {
           </div>
         </section>
 
-        {/* Mission Section */}
+
         <section className="py-16 bg-white/50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid md:grid-cols-2 gap-12 items-center">
@@ -90,7 +92,7 @@ export function AboutPage() {
           </div>
         </section>
 
-        {/* Values Section */}
+
         <section className="py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
@@ -123,7 +125,7 @@ export function AboutPage() {
           </div>
         </section>
 
-        {/* CTA Section */}
+
         <section className="py-20 bg-book-brown text-white">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="font-serif text-3xl md:text-4xl font-bold mb-6">
@@ -133,12 +135,14 @@ export function AboutPage() {
               Zacznij dzielić się swoimi książkami już dziś. 
               To nic nie kosztuje, a może przynieść wiele radości.
             </p>
-            <a
-              href="/register"
-              className="inline-block bg-book-gold hover:bg-book-gold-hover text-white px-8 py-4 rounded-full font-medium transition-all"
-            >
-              Rozpocznij przygodę
-            </a>
+            {!isAuthenticated && (
+              <a
+                href="/register"
+                className="inline-block bg-book-gold hover:bg-book-gold-hover text-white px-8 py-4 rounded-full font-medium transition-all"
+              >
+                Rozpocznij przygodę
+              </a>
+            )}
           </div>
         </section>
       </main>

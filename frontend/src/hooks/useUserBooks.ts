@@ -22,11 +22,18 @@ export function useMyBooks(page: number = 1, perPage: number = 20) {
     queryKey: [...userBookKeys.myBooks(), page, perPage],
     queryFn: async () => {
       const response = await booksApi.getMyLibrary(page, perPage);
-      // Backend returns { success, user_id, data: UserLibraryItem[], meta: {pagination} }
       return response.data || [];
     },
-    staleTime: 0, // Always refetch to avoid stale data
+    staleTime: 0,
     refetchOnMount: true,
+    refetchInterval: (query) => {
+      const data = query.state.data as UserLibraryItem[] | undefined;
+      if (!data) return false;
+      const hasPlaceholder = data.some((item: UserLibraryItem) => 
+        item.book?.title === 'Wczytywanie...' || item.book?.title === ''
+      );
+      return hasPlaceholder ? 3000 : false;
+    },
   });
 }
 

@@ -17,17 +17,30 @@ interface CoverUpdatedMessage {
   cover_url: string;
 }
 
-type WebSocketMessage = SubscribeMessage | UnsubscribeMessage | CoverUpdatedMessage;
+interface BookEnrichedMessage {
+  type: 'book_enriched';
+  book_id: string;
+  book_data: {
+    title?: string;
+    author?: string;
+    description?: string;
+    [key: string]: any;
+  };
+}
+
+type WebSocketMessage = SubscribeMessage | UnsubscribeMessage | CoverUpdatedMessage | BookEnrichedMessage;
 
 // Hook return type
 interface UseBookCoverWSReturn {
   isConnected: boolean;
   isDownloading: boolean;
   latestCoverUrl: string | null;
+  bookEnriched: boolean;
+  enrichedData: BookEnrichedMessage['book_data'] | null;
   error: string | null;
 }
 
-const WS_URL = 'ws://localhost:8000/ws/book-covers';
+const WS_URL = 'ws://localhost:8000/api/v1/ws/book-covers';
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY_MS = 3000;
 
@@ -47,6 +60,8 @@ export function useBookCoverWS(bookId: string): UseBookCoverWSReturn {
   const [isConnected, setIsConnected] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [latestCoverUrl, setLatestCoverUrl] = useState<string | null>(null);
+  const [bookEnriched, setBookEnriched] = useState(false);
+  const [enrichedData, setEnrichedData] = useState<BookEnrichedMessage['book_data'] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -79,6 +94,12 @@ export function useBookCoverWS(bookId: string): UseBookCoverWSReturn {
       return;
     }
 
+    // Don't connect if bookId is empty
+    if (!bookId) {
+      console.log('[useBookCoverWS] Pominięto połączenie - brak bookId');
+      return;
+    }
+
     if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
       console.error('[useBookCoverWS] Osiągnięto maksymalną liczbę prób połączenia');
       setError('Nie udało się połączyć z serwerem po wielu próbach');
@@ -103,13 +124,19 @@ export function useBookCoverWS(bookId: string): UseBookCoverWSReturn {
 
       ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data) as CoverUpdatedMessage;
+          const data = JSON.parse(event.data) as WebSocketMessage;
           console.log('[useBookCoverWS] Otrzymano wiadomość:', data);
 
           if (data.type === 'cover_updated' && data.book_id === bookId) {
             console.log('[useBookCoverWS] Aktualizacja okładki:', data.cover_url);
             setLatestCoverUrl(data.cover_url);
             setIsDownloading(false);
+          }
+          
+          if (data.type === 'book_enriched' && data.book_id === bookId) {
+            console.log('[useBookCoverWS] Dane książki wzbogacone:', data.book_data);
+            setBookEnriched(true);
+            setEnrichedData(data.book_data);
           }
         } catch (err) {
           console.error('[useBookCoverWS] Błąd parsowania wiadomości:', err);
@@ -176,6 +203,8 @@ export function useBookCoverWS(bookId: string): UseBookCoverWSReturn {
     isConnected,
     isDownloading,
     latestCoverUrl,
+    bookEnriched,
+    enrichedData,
     error,
   };
 }

@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/components/auth/AuthContext';
 import type { Book } from '@/types';
-import { statusConfig, getUserById } from '@/lib/data';
+import { statusConfig } from '@/lib/data';
 
 interface BookCardProps {
   book: Book;
@@ -45,7 +45,7 @@ export function BookCard({
   const statusInfo = statusConfig[book.status];
   const isAvailable = book.status === 'available';
   const isOwner = currentUserId === book.owner_id || user?.id === book.owner_id;
-  const owner = getUserById(book.owner_id);
+  const owner = book.owner;
   
   const handleCardClick = () => {
     if (onClick) {

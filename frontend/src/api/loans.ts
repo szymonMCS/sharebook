@@ -99,26 +99,22 @@ export const loansApi = {
 
   // ========== MESSAGES ==========
   
-  // Get message thread - GET /loan-requests/{request_id}/messages
   getMessages: (requestId: string) =>
-    apiClient<ApiResponse<MessageThread>>(`/loan-requests/${requestId}/messages`),
+    apiClient<ApiResponse<MessageThread>>(`/loan-requests-messages/${requestId}/messages`),
   
-  // Send message - POST /loan-requests/{request_id}/messages
   sendMessage: (requestId: string, content: string) =>
-    apiClient<ApiResponse<Message>>(`/loan-requests/${requestId}/messages`, {
+    apiClient<ApiResponse<Message>>(`/loan-requests-messages/${requestId}/messages`, {
       method: 'POST',
       body: { content }
     }),
 
-  // Mark all messages as read - POST /loan-requests/{request_id}/messages/read-all
   markAllMessagesRead: (requestId: string) =>
-    apiClient<ApiResponse<{ marked_as_read: number }>>(`/loan-requests/${requestId}/messages/read-all`, {
+    apiClient<ApiResponse<{ marked_as_read: number }>>(`/loan-requests-messages/${requestId}/messages/read-all`, {
       method: 'POST'
     }),
 
-  // Mark single message as read - PATCH /messages/{message_id}/read
   markMessageRead: (messageId: string) =>
-    apiClient<ApiResponse<boolean>>(`/messages/${messageId}/read`, {
+    apiClient<ApiResponse<boolean>>(`/loan-requests-messages/messages/${messageId}/read`, {
       method: 'PATCH'
     }),
 

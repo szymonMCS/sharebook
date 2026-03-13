@@ -4,7 +4,6 @@ import re
 import traceback
 from dataclasses import dataclass
 from typing import Any, Optional
-from concurrent.futures import ThreadPoolExecutor
 from src.config import settings
 from .agent import BookSearchAgent
 
@@ -26,7 +25,6 @@ class UnifiedBookSearch:
         self._api_key = openai_api_key or settings.OPENAI_API_KEY
         self._agent: Optional[BookSearchAgent] = None
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._executor = ThreadPoolExecutor(max_workers=3)
         
         if self._api_key:
             try:
@@ -45,8 +43,7 @@ class UnifiedBookSearch:
                 source="openai_web_search"
             )
         try:
-            loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(self._executor, self._agent.search, isbn)
+            result = await self._agent.search(isbn)
             if result.error:
                 return BookSearchResult(
                     success=False,
@@ -78,8 +75,7 @@ class UnifiedBookSearch:
                 source="openai_web_search"
             )
         try:
-            loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(self._executor, self._agent.search, query)
+            result = await self._agent.search(query)
             if result.error:
                 return BookSearchResult(
                     success=False,
@@ -101,7 +97,7 @@ class UnifiedBookSearch:
             )
 
     async def close(self) -> None:
-        self._executor.shutdown(wait=False)
+        pass
 
     async def __aenter__(self) -> "UnifiedBookSearch":
         return self

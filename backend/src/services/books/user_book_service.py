@@ -86,23 +86,29 @@ class UserBookService:
                     title = title or "Książka bez tytułu"
                     author = author or "Nieznany autor"
             
-            book = await self.book_repo.create(
-                isbn=book_data.isbn,
-                title=title,
-                author=author,
-                description=description,
-                publisher=book_data.publisher,
-                publication_year=publication_year,
-                page_count=page_count,
-                language=language or "pl",
-                genre=genre
-            )
+            book = await self.book_repo.create({
+                "isbn": book_data.isbn,
+                "title": title,
+                "author": author,
+                "description": description,
+                "publisher": book_data.publisher,
+                "publication_year": publication_year,
+                "page_count": page_count,
+                "language": language or "pl",
+                "genre": genre
+            })
             is_new_book = True
         else:
             book = existing_book
             is_new_book = False
         
-        user_book = await self.user_book_repo.create(user_id=user_id, book_id=book.id, status="available", condition=condition, is_lendable=is_lendable)
+        user_book = await self.user_book_repo.create({
+            "user_id": user_id,
+            "book_id": book.id,
+            "status": "available",
+            "condition": condition,
+            "is_lendable": is_lendable,
+        })
         
         return {
             "status": "added",
@@ -119,29 +125,29 @@ class UserBookService:
         existing_book = await self.book_repo.get_by_isbn(isbn)
         
         if not existing_book:
-            book = await self.book_repo.create(
-                isbn=isbn,
-                title="Wczytywanie...",
-                author="",
-                description="",
-                publisher=None,
-                publication_year=None,
-                page_count=None,
-                language="pl",
-                genre=None
-            )
+            book = await self.book_repo.create({
+                "isbn": isbn,
+                "title": "Wczytywanie...",
+                "author": "",
+                "description": "",
+                "publisher": None,
+                "publication_year": None,
+                "page_count": None,
+                "language": "pl",
+                "genre": None
+            })
             is_new_book = True
         else:
             book = existing_book
             is_new_book = False
   
-        user_book = await self.user_book_repo.create(
-            user_id=user_id,
-            book_id=book.id,
-            status="available",
-            condition=condition,
-            is_lendable=is_lendable,
-        )
+        user_book = await self.user_book_repo.create({
+            "user_id": user_id,
+            "book_id": book.id,
+            "status": "available",
+            "condition": condition,
+            "is_lendable": is_lendable,
+        })
         
         return {
             "id": str(user_book.id),

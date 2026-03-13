@@ -136,7 +136,7 @@ class AddBookToLibraryRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     
     isbn: str = Field(..., min_length=ISBN_MIN_LENGTH, max_length=ISBN_MAX_LENGTH, description="ISBN-10 or ISBN-13")
-    condition: BookCondition = Field(..., description="Book condition")
+    condition: BookCondition = Field(default=BookCondition.GOOD, description="Book condition")
     
     @field_validator('isbn')
     @classmethod

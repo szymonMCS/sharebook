@@ -4,7 +4,7 @@ from typing import Optional
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.services.cover import get_cover_service
-from src.api.v1.endpoints.system.websocket import notify_cover_updated, notify_cover_status
+from src.api.v1.endpoints.system.websocket import notify_cover_updated, notify_cover_status, notify_book_enriched
 from database.repositories.book_repository import BookRepository
 from src.services.book_discovery import UnifiedBookSearch
 from sqlalchemy import update
@@ -34,11 +34,7 @@ async def download_book_cover_background(
                 stmt = (update(Book).where(Book.id == book_id).values(cover_url=result.local_url))
                 await db.execute(stmt)
                 await db.commit()
-            
-            logger.info(
-                f"[Background] Cover saved for book {book_id}: "
-                f"{result.local_url} (source: {result.source})"
-            )
+            logger.info(f"[Background] Cover saved for book {book_id}: "f"{result.local_url} (source: {result.source})")
             
             await notify_cover_status(str(book_id), "completed", result.local_url)
             await notify_cover_updated(str(book_id), result.local_url)
@@ -55,10 +51,9 @@ async def download_book_cover_background(
         await notify_cover_status(str(book_id), "failed")
 
 async def enrich_and_fetch_cover_background(book_id: UUID, isbn: str, db: AsyncSession) -> None:
+    logger.info(f"[Background] Starting enrichment for book {book_id}")
     try:
-        logger.info(f"[Background] Starting enrichment for book {book_id}")
         await notify_cover_status(str(book_id), "processing")
-        
         search = UnifiedBookSearch()
         result = await search.search_by_isbn(isbn)
         
@@ -98,6 +93,9 @@ async def enrich_and_fetch_cover_background(book_id: UUID, isbn: str, db: AsyncS
                 await db.execute(stmt)
                 await db.commit()
                 logger.info(f"[Background] Updated book {book_id} with {len(update_values)} fields")
+                
+                enriched_data = {k: v for k, v in update_values.items()}
+                await notify_book_enriched(str(book_id), enriched_data)
             
             cover_url = data.get('cover_image_url')
             if cover_url and (not book.cover_url or book.cover_url == ""):
@@ -122,7 +120,7 @@ async def enrich_and_fetch_cover_background(book_id: UUID, isbn: str, db: AsyncS
             else:
                 await notify_cover_status(str(book_id), "completed")
         else:
-            logger.warning(f"[Background] Enrichment failed: {result.error}")
+            logger.warning(f"[Background] Search failed for book {book_id}: {result.error}")
             await notify_cover_status(str(book_id), "failed")
             
     except Exception as e:

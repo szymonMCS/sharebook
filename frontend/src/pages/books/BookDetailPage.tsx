@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { Progress } from '@/components/ui/progress';
 import {
   Dialog,
   DialogContent,
@@ -32,23 +33,61 @@ import { booksApi } from '@/api/books';
 import { loansApi } from '@/api/loans';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/auth/AuthContext';
-import { useUpdateBookStatus, useDeleteBook, userBookKeys } from '@/hooks/useUserBooks';
+import { useUpdateBookStatus, useDeleteBook } from '@/hooks/useUserBooks';
+import { useBookCoverWS } from '@/hooks/useBookCoverWS';
 import type { Book } from '@/types';
-import { useQueryClient } from '@tanstack/react-query';
+
 import { statusConfig } from '@/lib/data';
+
+type LoadingStage = 'idle' | 'checking-auth' | 'fetching-private' | 'fetching-public' | 'connecting-ws' | 'done' | 'error';
 
 
 export function BookDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const queryClient = useQueryClient();
+
   const updateBookStatusMutation = useUpdateBookStatus();
   const deleteBookMutation = useDeleteBook();
   
   const [book, setBook] = useState<Book | null>(null);
-  const [_isLoading, setIsLoading] = useState(true);
+  const [loadingStage, setLoadingStage] = useState<LoadingStage>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [isEnriching, setIsEnriching] = useState(false);
+
+  const handleEnrichBook = useCallback(async (bookId: string) => {
+    setIsEnriching(true);
+    try {
+      const response = await booksApi.enrichBook(bookId);
+      if (response.status === 'processing') {
+        toast.info('Rozpoczęto wzbogacanie danych książki. To może potrwać kilka sekund.');
+      }
+    } catch (err) {
+      toast.error('Błąd podczas wzbogacania książki');
+    } finally {
+      setIsEnriching(false);
+    }
+  }, []);
+  
+  const stageProgress: Record<LoadingStage, number> = {
+    'idle': 0,
+    'checking-auth': 10,
+    'fetching-private': 30,
+    'fetching-public': 50,
+    'connecting-ws': 80,
+    'done': 100,
+    'error': 0
+  };
+  
+  const stageMessages: Record<LoadingStage, string> = {
+    'idle': 'Inicjalizacja...',
+    'checking-auth': 'Sprawdzanie autentykacji...',
+    'fetching-private': 'Pobieranie danych książki (prywatne)...',
+    'fetching-public': 'Pobieranie danych książki (publiczne)...',
+    'connecting-ws': 'Łączenie z serwerem WebSocket...',
+    'done': 'Gotowe!',
+    'error': 'Błąd ładowania'
+  };
   const [isRequesting, setIsRequesting] = useState(false);
   const [requestSuccess, setRequestSuccess] = useState(false);
   const [isManagementModalOpen, setIsManagementModalOpen] = useState(false);
@@ -56,37 +95,56 @@ export function BookDetailPage() {
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [requestMessage, setRequestMessage] = useState('');
 
+  const loadBook = useCallback(async (bookId: string) => {
+    setLoadingStage('checking-auth');
+    setError(null);
+    
+    try {
+      let response;
+      
+      if (isAuthenticated) {
+        setLoadingStage('fetching-private');
+        try {
+          response = await booksApi.getMyBookCopy(bookId);
+        } catch {
+          setLoadingStage('fetching-public');
+          response = await booksApi.getBook(bookId);
+        }
+      } else {
+        setLoadingStage('fetching-public');
+        response = await booksApi.getBook(bookId);
+      }
+      
+      setBook(response.data);
+      
+      if (response.data.title === 'Wczytywanie...' || response.data.title === '') {
+        handleEnrichBook(response.data.id);
+      }
+      
+      setLoadingStage('done');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Wystąpił błąd podczas ładowania książki');
+      setLoadingStage('error');
+    }
+  }, [isAuthenticated, handleEnrichBook]);
 
   useEffect(() => {
     if (id) {
       loadBook(id);
     }
-  }, [id]);
+  }, [id, loadBook]);
 
-  const loadBook = async (bookId: string) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Try to load as owner's copy first (handles multiple copies)
-      // If user is not owner, this will fail and we fallback to public endpoint
-      let response;
-      try {
-        response = await booksApi.getMyBookCopy(bookId);
-        console.log('Book loaded as owner copy:', response);
-      } catch {
-        // Not owner or not found, try public endpoint
-        response = await booksApi.getBook(bookId);
-        console.log('Book loaded from public:', response);
-      }
-      setBook(response.data);
-    } catch (err) {
-      console.error('Error loading book:', err);
-      setError(err instanceof Error ? err.message : 'Wystąpił błąd podczas ładowania książki');
-    } finally {
-      setIsLoading(false);
+  const { latestCoverUrl, bookEnriched } = useBookCoverWS(book?.book_id || book?.id || '');
+
+  const isBookEnriching = book && (book.title === 'Wczytywanie...' || book.title === '');
+
+  const coverUrl = latestCoverUrl || book?.cover_url;
+
+  useEffect(() => {
+    if ((bookEnriched || latestCoverUrl) && id) {
+      loadBook(id);
     }
-  };
+  }, [bookEnriched, latestCoverUrl, id, loadBook]);
 
   const handleBorrowRequest = () => {
     if (!isAuthenticated) {
@@ -96,7 +154,6 @@ export function BookDetailPage() {
 
     if (!book || book.owner_id === user?.id) return;
 
-    // Open message modal instead of sending immediately
     setIsMessageModalOpen(true);
   };
 
@@ -110,7 +167,6 @@ export function BookDetailPage() {
         setRequestSuccess(true);
         setIsMessageModalOpen(false);
         setRequestMessage('');
-        // Navigate to reader requests page after successful creation
         navigate('/reader/requests');
       }
     } catch (err) {
@@ -126,12 +182,9 @@ export function BookDetailPage() {
     setIsManaging(true);
     try {
       await deleteBookMutation.mutateAsync(bookId);
-      // Show success message
       toast.success('Książka została usunięta z biblioteki');
-      // Navigate to reader panel
       navigate('/reader/my-books');
     } catch (err) {
-      // Don't set global error - just show toast and stay on page
       const errorMsg = err instanceof Error ? err.message : 'Błąd usuwania książki';
       toast.error(errorMsg);
       console.error('Delete error:', err);
@@ -144,14 +197,11 @@ export function BookDetailPage() {
     setIsManaging(true);
     try {
       await updateBookStatusMutation.mutateAsync({ id: bookId, status: newStatus });
-      // Also update the local book state immediately for better UX
       setBook(prev => prev ? { ...prev, status: newStatus as Book['status'] } : null);
-      // Refresh book data using loadBook which handles multiple copies correctly
       if (id) {
         try {
           await loadBook(id);
         } catch (refreshErr) {
-          // Ignore refresh error - status was already changed locally
           console.error('Error refreshing book data:', refreshErr);
         }
       }
@@ -164,32 +214,31 @@ export function BookDetailPage() {
     }
   };
 
-  const handleEnrichBook = async () => {
-    if (!book) return;
-    
-    // Use book_id (actual book ID) for enrich endpoint, fallback to id (user_book_id) for backward compatibility
-    const bookId = book.book_id || book.id;
-    
-    setIsManaging(true);
-    try {
-      await booksApi.enrich(bookId);
-      toast.success('Wzbogacanie książki uruchomione. Dane zostaną zaktualizowane za chwilę.');
-      // Refresh after 3 seconds to show updated data
-      setTimeout(() => {
-        if (id) loadBook(id);
-        // Also invalidate user books list cache so MyBooksSection shows updated data
-        queryClient.invalidateQueries({ queryKey: userBookKeys.myBooks() });
-      }, 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Błąd wzbogacania książki');
-      toast.error(err instanceof Error ? err.message : 'Błąd wzbogacania książki');
-    } finally {
-      setIsManaging(false);
-    }
-  };
-
-  // Check if book data is still being enriched by AI
-  const isBookEnriching = book && (book.title === 'Wczytywanie...' || book.title === '');
+  if (loadingStage !== 'done' && loadingStage !== 'error' && !book) {
+    return (
+      <div className="min-h-screen bg-warm-beige">
+        <Navbar />
+        <div className="pt-32 pb-16 px-4">
+          <div className="max-w-md mx-auto text-center">
+            <BookLoadingAnimation 
+              message={stageMessages[loadingStage]}
+              size="md"
+            />
+            <div className="mt-8 space-y-2">
+              <Progress value={stageProgress[loadingStage]} className="h-2" />
+              <p className="text-sm text-book-gray">
+                {stageProgress[loadingStage]}% - {stageMessages[loadingStage]}
+              </p>
+            </div>
+            <p className="mt-4 text-xs text-stone-400">
+              ID: {id}
+            </p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   if (error || !book) {
     return (
@@ -217,37 +266,38 @@ export function BookDetailPage() {
     );
   }
 
-  const bookStatus = statusConfig[book.status];
-  const isOwner = user?.id === book.owner_id;
+  const bookStatus = statusConfig[book.status] || { 
+    label: 'Nieznany', 
+    color: 'bg-gray-100 text-gray-800 border-gray-200',
+    className: 'bg-gray-100 text-gray-800 border-gray-200',
+    icon: BookOpen
+  };
+  const isOwner = isAuthenticated && user?.id === book.owner_id;
   const isAvailable = book.status === 'available';
 
   return (
     <div className="min-h-screen bg-warm-beige relative">
       <Navbar className={isBookEnriching ? 'opacity-0 pointer-events-none' : ''} />
       
-      {/* Loading Overlay - shows when AI is enriching book data */}
       {isBookEnriching && (
         <div className="fixed inset-0 bg-stone-900/95 z-50 flex flex-col items-center justify-center px-4">
           <BookLoadingAnimation 
             message="Wczytywanie informacji o książce..."
             size="lg"
           />
-          <p className="mt-8 text-stone-400 text-sm text-center max-w-md">
-            Szukamy szczegółów książki w naszej bazie i zewnętrznych źródłach. To może potrwać kilka sekund.
+          <div className="mt-8 w-full max-w-xs space-y-3">
+            <Progress value={75} className="h-2 bg-stone-700" />
+            <p className="text-stone-400 text-sm text-center">
+              Wzbogacanie danych książki...
+            </p>
+          </div>
+          <p className="mt-4 text-stone-500 text-sm text-center max-w-md">
+            Szukamy szczegółów książki w naszej bazie i zewnętrznych źródłach.
           </p>
-          {isOwner && !isManaging && (
-            <Button
-              onClick={handleEnrichBook}
-              className="mt-6 bg-book-gold hover:bg-book-gold-hover"
-            >
-              <BookOpen className="w-4 h-4 mr-2" />
-              Odśwież dane książki
-            </Button>
-          )}
           <Button
             variant="outline"
             onClick={() => navigate('/reader/my-books')}
-            className="mt-4 border-stone-600 text-stone-300 hover:bg-stone-800 hover:text-white"
+            className="mt-6 border-stone-500 text-stone-200 bg-stone-800 hover:bg-stone-700 hover:text-white"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Wróć do moich książek
@@ -257,7 +307,7 @@ export function BookDetailPage() {
       
       <main className="pt-24 pb-16 px-4">
         <div className="max-w-6xl mx-auto">
-          {/* Back Button */}
+
           <Button
             variant="ghost"
             onClick={() => navigate(isOwner ? '/reader/my-books' : '/browse')}
@@ -268,20 +318,20 @@ export function BookDetailPage() {
           </Button>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {/* Book Cover */}
+
             <div className="md:col-span-1">
               <div className="aspect-[2/3] rounded-2xl overflow-hidden shadow-book bg-stone-100 sticky top-28">
                 <LazyBookCover
-                  coverUrl={book.cover_url}
+                  coverUrl={coverUrl}
                   title={book.title}
                   className="h-full"
                 />
               </div>
             </div>
 
-            {/* Book Details */}
+
             <div className="md:col-span-2 space-y-6">
-              {/* Header */}
+
               <div>
                 <div className="flex items-center gap-3 mb-3">
                   <Badge className={bookStatus.color}>
@@ -303,7 +353,7 @@ export function BookDetailPage() {
                 </p>
               </div>
 
-              {/* Action Buttons */}
+
               <div className="flex flex-wrap gap-3">
                 {isAvailable && !isOwner && isAuthenticated && (
                   <Button
@@ -338,6 +388,8 @@ export function BookDetailPage() {
                     Zaloguj się, aby wypożyczyć
                   </Button>
                 )}
+                
+
                 
                 {isOwner && (
                   <Button
@@ -375,7 +427,7 @@ export function BookDetailPage() {
                 </div>
               )}
 
-              {/* Book Info Grid */}
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-6 border-y border-stone-200">
                 {book.isbn && (
                   <div>
@@ -403,7 +455,7 @@ export function BookDetailPage() {
                 )}
               </div>
 
-              {/* Description */}
+
               {book.description && (
                 <div>
                   <h2 className="font-serif text-xl font-semibold text-book-brown mb-3">
@@ -415,7 +467,7 @@ export function BookDetailPage() {
                 </div>
               )}
 
-              {/* Owner Info */}
+
               <div className="bg-white rounded-xl p-6 shadow-sm border border-stone-200">
                 <h2 className="font-serif text-lg font-semibold text-book-brown mb-4">
                   Informacje o właścicielu
@@ -441,7 +493,7 @@ export function BookDetailPage() {
                 </div>
               </div>
 
-              {/* Borrowing Conditions */}
+
               <div className="bg-stone-50 rounded-xl p-6">
                 <h2 className="font-serif text-lg font-semibold text-book-brown mb-4">
                   Warunki wypożyczenia
@@ -468,7 +520,7 @@ export function BookDetailPage() {
 
       <Footer />
 
-      {/* Book Management Modal */}
+
       <BookManagementModal
         book={book}
         isOpen={isManagementModalOpen}
@@ -478,7 +530,7 @@ export function BookDetailPage() {
         isLoading={isManaging}
       />
 
-      {/* Request Message Modal */}
+
       <Dialog open={isMessageModalOpen} onOpenChange={setIsMessageModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
