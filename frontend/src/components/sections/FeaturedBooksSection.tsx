@@ -7,7 +7,6 @@ import { booksApi } from '@/api/books';
 import { useQuery } from '@tanstack/react-query';
 import type { Book } from '@/types';
 
-// Map CommunityBook to Book type
 function mapCommunityBookToBook(communityBook: any): Book {
   return {
     id: communityBook.id,
@@ -19,13 +18,13 @@ function mapCommunityBookToBook(communityBook: any): Book {
     status: communityBook.status as any,
     is_lendable: communityBook.is_lendable,
     owner_id: communityBook.owner_id,
-    owner: communityBook.owner_name ? {
-      id: String(communityBook.owner_id),
-      first_name: communityBook.owner_name.split(' ')[0] || '',
-      last_name: communityBook.owner_name.split(' ')[1] || '',
-      location: null,
+    owner: communityBook.owner ? {
+      id: String(communityBook.owner.id),
+      first_name: communityBook.owner.first_name || '',
+      last_name: communityBook.owner.last_name || '',
+      location: communityBook.owner.location || null,
     } : undefined,
-    genre: undefined, // CommunityBook doesn't have genre yet
+    genre: communityBook.genre || undefined,
     publisher: communityBook.publisher || null,
     publication_year: communityBook.publication_year || null,
     created_at: communityBook.created_at,
@@ -33,7 +32,6 @@ function mapCommunityBookToBook(communityBook: any): Book {
   };
 }
 
-// Shuffle array using Fisher-Yates algorithm
 function shuffleArray<T>(array: T[]): T[] {
   const shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -46,7 +44,6 @@ function shuffleArray<T>(array: T[]): T[] {
 export function FeaturedBooksSection() {
   const navigate = useNavigate();
 
-  // Fetch real books from API with caching
   const { data: communityBooksData, isLoading, error } = useQuery({
     queryKey: ['communityBooks', 1, 20],
     queryFn: () => booksApi.getCommunityBooks(1, 20),
@@ -56,7 +53,6 @@ export function FeaturedBooksSection() {
   });
 
   const books = useMemo(() => {
-    // API returns { success: true, data: CommunityBook[], message: ... }
     const booksArray = communityBooksData?.data;
     if (!booksArray || !Array.isArray(booksArray)) return [];
     return booksArray.map(mapCommunityBookToBook);

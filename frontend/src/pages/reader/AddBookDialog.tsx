@@ -129,14 +129,14 @@ export function AddBookDialog({ open, onOpenChange, onBookAdded }: AddBookDialog
         is_lendable: true,
       });
       
-      // Keep animation for a moment after success, then redirect to home
+      // Keep animation for a moment after success, then stay in reader panel
       setTimeout(() => {
         resetForm();
         onOpenChange(false);
         onBookAdded?.();
         setIsProcessing(false);
-        // Redirect to home page where user can see the book being processed
-        navigate('/');
+        // Stay on my-books page to see the added book
+        navigate('/reader/my-books');
       }, 2000);
       
     } catch (err) {
@@ -254,12 +254,10 @@ export function AddBookDialog({ open, onOpenChange, onBookAdded }: AddBookDialog
                 <SelectValue placeholder="Wybierz stan książki" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="new">Nowa (nieużywana)</SelectItem>
-                <SelectItem value="like_new">Jak nowa (bez śladów użytkowania)</SelectItem>
-                <SelectItem value="very_good">Bardzo dobry (minimalne ślady)</SelectItem>
-                <SelectItem value="good">Dobry (lekko używana)</SelectItem>
-                <SelectItem value="fair">Średni (widoczne ślady użytkowania)</SelectItem>
-                <SelectItem value="poor">Słaby (mocno zużyta)</SelectItem>
+                <SelectItem value="new">Nowa</SelectItem>
+                <SelectItem value="good">Dobra</SelectItem>
+                <SelectItem value="fair">Średnia</SelectItem>
+                <SelectItem value="poor">Słaba</SelectItem>
               </SelectContent>
             </Select>
             {errors.condition && (

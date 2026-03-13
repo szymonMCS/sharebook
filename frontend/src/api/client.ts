@@ -11,7 +11,8 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
 
 // Get CSRF token from cookies
 function getCsrfToken(): string | null {
-  const match = document.cookie.match(/csrf_token=([^;]+)/);
+  // Backend sets cookie as 'XSRF-TOKEN', we need to send header as 'X-CSRF-Token'
+  const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
   return match ? decodeURIComponent(match[1]) : null;
 }
 
@@ -32,7 +33,7 @@ export async function apiClient<T>(
   if (needsCsrfToken(options.method || 'GET') && !options.skipCsrf) {
     const csrfToken = getCsrfToken();
     if (csrfToken) {
-      headers['X-CSRF-Token'] = csrfToken;
+      headers['X-XSRF-TOKEN'] = csrfToken;
     }
   }
   

@@ -5,7 +5,7 @@ from src.services.interfaces.messages import IMessageService
 from src.schemas.loan import MessageCreate
 from database.models import User
 
-router = APIRouter(prefix="/loan-requests", tags=["messages"])
+router = APIRouter(prefix="/loan-requests-messages", tags=["messages"])
 
 
 @router.get("/{request_id}/messages", response_model=dict)

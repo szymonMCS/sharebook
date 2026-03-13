@@ -27,40 +27,40 @@ export interface AddBookResponse {
 }
 
 export const booksApi = {
-  // Get user's library - GET /library/my-books
+  // Get user's library - GET /my-books
   getMyLibrary: (page: number = 1, perPage: number = 20) =>
-    api.get<LibraryResponse>(`/library/my-books?page=${page}&per_page=${perPage}`),
+    api.get<LibraryResponse>(`/my-books?page=${page}&per_page=${perPage}`),
   
   // Get single book by ID - GET /books/{book_id}
   getBook: (bookId: string) =>
     api.get<{ success: boolean; data: Book }>(`/books/${bookId}`),
   
-  // Get specific copy of user's book - GET /library/my-books/{user_book_id}
+  // Get specific copy of user's book - GET /my-books/{user_book_id}
   getMyBookCopy: (userBookId: string) =>
-    api.get<{ success: boolean; data: UserLibraryItem }>(`/library/my-books/${userBookId}`),
+    api.get<{ success: boolean; data: UserLibraryItem }>(`/my-books/${userBookId}`),
   
-  // Add book to library (ISBN required) - POST /library/books
+  // Add book to library (ISBN required) - POST /my-books
   addBook: (data: AddBookRequest) =>
-    api.post<AddBookResponse>('/library/books', {
+    api.post<AddBookResponse>('/my-books', {
       isbn: data.isbn,
       condition: data.condition || 'good',
     }),
   
-  // Remove book from library by user_book ID - DELETE /library/my-books/{user_book_id}
+  // Remove book from library by user_book ID - DELETE /my-books/{user_book_id}
   removeBook: (userBookId: string) =>
-    api.delete<void>(`/library/my-books/${userBookId}`),
+    api.delete<void>(`/my-books/${userBookId}`),
   
-  // Update lendable status by user_book_id - PATCH /library/my-books/{user_book_id}/lendable
+  // Update lendable status by user_book_id - PATCH /my-books/{user_book_id}/lendable
   toggleLendable: (userBookId: string, isLendable: boolean) =>
     api.patch<{ success: boolean; message: string; data: { is_lendable: boolean } }>(
-      `/library/my-books/${userBookId}/lendable`, 
+      `/my-books/${userBookId}/lendable`, 
       { is_lendable: isLendable }
     ),
   
-  // Update book status by user_book_id - PATCH /library/my-books/{user_book_id}/status
+  // Update book status by user_book_id - PATCH /my-books/{user_book_id}/status
   updateStatus: (userBookId: string, status: string) =>
     api.patch<{ success: boolean; message: string; data: { status: string } }>(
-      `/library/my-books/${userBookId}/status`, 
+      `/my-books/${userBookId}/status`, 
       { status }
     ),
 
@@ -80,4 +80,8 @@ export const booksApi = {
     if (filters?.author) params.append('author', filters.author);
     return api.get<{ success: boolean; data: Book[]; meta: { pagination: any } }>(`/community/books?${params.toString()}`);
   },
+
+  // Enrich book data - POST /books/{book_id}/enrich
+  enrichBook: (bookId: string) =>
+    api.post<{ success: boolean; message: string; status: string }>(`/books/${bookId}/enrich`, {}),
 };

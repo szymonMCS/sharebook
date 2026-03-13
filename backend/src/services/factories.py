@@ -120,20 +120,14 @@ class ServiceFactory(IServiceFactory):
     def create_token_service(self):
         return TokenService()
     def create_user_service(self):
-        """Alias for create_auth_service - provides user management functionality."""
         return self.create_auth_service()
     def create_registration_service(self):
-        """Alias for create_auth_service - provides user registration functionality."""
         return self.create_auth_service()
     def create_password_service(self):
-        """Returns auth service which handles password operations."""
         return self.create_auth_service()
     def create_book_catalog_service(self):
-        """Alias for create_book_service - provides book catalog functionality."""
         return self.create_book_service()
     def create_library_management_service(self):
-        """Alias for create_user_book_service - provides library management."""
         return self.create_user_book_service()
     def create_book_import_service(self):
-        """Creates GoogleBooksService for importing book metadata."""
         return GoogleBooksService()
