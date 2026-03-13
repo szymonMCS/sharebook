@@ -166,3 +166,10 @@ class UserRepository(IUserRepository):
             {"date": str(row.date), "count": row.count}
             for row in result.all()
         ]
+    
+    async def count_users(self) -> int:
+        return await self.count_all()
+    
+    async def get_recent_users(self, limit: int = 5) -> List[User]:
+        result = await self._db.execute(select(User).order_by(User.created_at.desc()).limit(limit))
+        return result.scalars().all()
