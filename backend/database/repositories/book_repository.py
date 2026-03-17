@@ -99,11 +99,13 @@ class BookRepository(IBookRepository):
         limit: int = 20
     ) -> List[Any]:
         filters = {}
+        if status:
+            filters["status"] = status
         if search:
             filters["search"] = search
         if author:
             filters["author"] = author
-        items, _ = await self.get_community_books(skip=skip, limit=limit, filters=filters)
+        items, _ = await self.get_community_books(exclude_user_id=exclude_user_id, skip=skip, limit=limit, filters=filters)
         return items
     
     async def count_available_for_community(
@@ -114,24 +116,44 @@ class BookRepository(IBookRepository):
         author: Optional[str] = None
     ) -> int:
         filters = {}
+        if status:
+            filters["status"] = status
         if search:
             filters["search"] = search
         if author:
             filters["author"] = author
-        _, total = await self.get_community_books(skip=0, limit=1, filters=filters)
+        _, total = await self.get_community_books(exclude_user_id=exclude_user_id, skip=0, limit=1, filters=filters)
         return total
     
-    async def get_community_books(self, skip: int = 0, limit: int = 20, filters: Optional[dict] = None) -> Tuple[List[Any], int]:
-        stmt = (select(Book, UserBook, User).join(UserBook, Book.id == UserBook.book_id).join(User, UserBook.user_id == User.id).where(UserBook.status == "available"))
-        count_stmt = (select(func.count(Book.id)).join(UserBook, Book.id == UserBook.book_id).where(UserBook.status == "available"))
+    async def get_community_books(self, exclude_user_id: Optional[uuid.UUID] = None, skip: int = 0, limit: int = 20, filters: Optional[dict] = None) -> Tuple[List[Any], int]:
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        status_filter = None
+        if filters and "status" in filters and filters["status"]:
+            if filters["status"] != "all":
+                status_filter = filters["status"]
+        
+        logger.info(f"[REPO] get_community_books: exclude_user_id={exclude_user_id}, status_filter={status_filter}, filters={filters}")
+        
+        stmt = select(Book, UserBook, User).join(UserBook, Book.id == UserBook.book_id).join(User, UserBook.user_id == User.id)
+        count_stmt = select(func.count(Book.id)).join(UserBook, Book.id == UserBook.book_id)
+        
+        if status_filter:
+            stmt = stmt.where(UserBook.status == status_filter)
+            count_stmt = count_stmt.where(UserBook.status == status_filter)
+        
+        if exclude_user_id:
+            stmt = stmt.where(UserBook.user_id != exclude_user_id)
+            count_stmt = count_stmt.where(UserBook.user_id != exclude_user_id)
         
         if filters:
             if "search" in filters and filters["search"]:
                 search = f"%{filters['search']}%"
-                stmt = stmt.where(or_(Book.title.ilike(search), Book.authors.ilike(search)))
-                count_stmt = count_stmt.where(or_(Book.title.ilike(search), Book.authors.ilike(search)))
+                stmt = stmt.where(or_(Book.title.ilike(search), Book.author.ilike(search)))
+                count_stmt = count_stmt.where(or_(Book.title.ilike(search), Book.author.ilike(search)))
             if "author" in filters and filters["author"]:
-                author_filter = Book.authors.ilike(f"%{filters['author']}%")
+                author_filter = Book.author.ilike(f"%{filters['author']}%")
                 stmt = stmt.where(author_filter)
                 count_stmt = count_stmt.where(author_filter)
         

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -10,11 +10,15 @@ import { GradientOrbs } from '@/components/layout/FloatingBooks';
 import { BookFilters, type BrowseFilters } from '@/components/books/BookFilters';
 import { BookGrid } from '@/components/books/BookGrid';
 import { useCommunityBooks } from '@/hooks/useCommunityBooks';
+import { useAuth } from '@/components/auth/AuthContext';
+import { loansApi } from '@/api/loans';
 import type { Book } from '@/types';
 
 const ITEMS_PER_PAGE = 12;
 
 function BrowsePageContent() {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Initialize filters from URL
@@ -38,7 +42,7 @@ function BrowsePageContent() {
   });
 
   const books = data?.data || [];
-  const pagination = data?.pagination;
+  const pagination = data?.meta?.pagination;
 
   // Extract unique authors for filter (from current page only for performance)
   const authors = useMemo(() => {
@@ -71,20 +75,34 @@ function BrowsePageContent() {
   // Handle borrow request
   const handleRequestBorrow = useCallback(
     async (book: Book) => {
-      try {
-        // TODO: Implement actual API call for borrow request
-        // const response = await api.post('/loan-requests', { book_id: book.id });
+      if (!isAuthenticated) {
+        navigate('/login', { state: { from: `/books/${book.id}` } });
+        return;
+      }
 
-        toast.success('Prośba wysłana', {
-          description: `Wysłano prośbę o wypożyczenie "${book.title}"`,
-        });
-      } catch {
+      if (!book.user_book_id) {
         toast.error('Błąd', {
-          description: 'Nie udało się wysłać prośby. Spróbuj ponownie.',
+          description: 'Nie można wysłać prośby o wypożyczenie - brak ID książki.',
+        });
+        return;
+      }
+
+      try {
+        const response = await loansApi.createRequest(book.user_book_id);
+        if (response.success) {
+          toast.success('Prośba wysłana', {
+            description: `Wysłano prośbę o wypożyczenie "${book.title}"`,
+          });
+          navigate('/reader/requests');
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Nie udało się wysłać prośby. Spróbuj ponownie.';
+        toast.error('Błąd', {
+          description: errorMessage,
         });
       }
     },
-    []
+    [isAuthenticated, navigate]
   );
 
   // Handle page change

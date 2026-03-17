@@ -10,6 +10,7 @@ import type { Book } from '@/types';
 function mapCommunityBookToBook(communityBook: any): Book {
   return {
     id: communityBook.id,
+    user_book_id: communityBook.user_book_id,
     title: communityBook.title,
     author: communityBook.author,
     isbn: communityBook.isbn,
