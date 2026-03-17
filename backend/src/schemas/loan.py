@@ -28,23 +28,31 @@ class LoanResponse(LoanBase):
     updated_at: datetime
 
 
+class BookInfo(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    
+    id: UUID
+    title: str
+    author: Optional[str] = None
+    cover_url: Optional[str] = None
+
+
+class PersonInfo(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    
+    id: UUID
+    name: str
+    location: Optional[str] = None
+
+
 class BorrowedBookResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
     
-    loan_id: UUID
+    id: UUID
     borrowed_at: datetime
     due_date: datetime
-    
-    # Denormalizacja - dane książki
-    book_id: UUID
-    book_title: str
-    book_author: Optional[str] = None
-    book_cover_url: Optional[str] = None
-    
-    # Denormalizacja - dane właściciela (lender)
-    lender_id: UUID
-    lender_name: str
-    lender_location: Optional[str] = None
+    book: BookInfo
+    owner: PersonInfo 
     
     @computed_field
     @property
@@ -57,19 +65,11 @@ class BorrowedBookResponse(BaseModel):
 class LentBookResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
     
-    loan_id: UUID
+    id: UUID 
     borrowed_at: datetime
     due_date: datetime
-    
-    # Denormalizacja - dane książki
-    book_id: UUID
-    book_title: str
-    book_author: Optional[str] = None
-    
-    # Denormalizacja - dane pożyczającego (borrower)
-    borrower_id: UUID
-    borrower_name: str
-    borrower_location: Optional[str] = None
+    book: BookInfo
+    owner: PersonInfo 
     
     @computed_field
     @property
@@ -81,12 +81,7 @@ class LentBookResponse(BaseModel):
 
 class LoanRequestBase(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-
-    message: Optional[str] = Field(
-        None,
-        max_length=1000,
-        description="Wiadomosc od proszacego"
-    )
+    message: Optional[str] = Field(None, max_length=1000, description="Wiadomosc od proszacego")
 
 
 class LoanRequestCreate(LoanRequestBase):
@@ -98,15 +93,20 @@ class LoanRequestResponse(LoanRequestBase):
 
     id: UUID
     user_book_id: UUID
+    book_id: Optional[UUID] = None
+    book_title: str = "Unknown"
+    book_cover_url: Optional[str] = None
     requester_id: UUID
+    requester_name: str = "Unknown"
+    requester_avatar: Optional[str] = None
     owner_id: UUID
-    status: LoanRequestStatus = Field(
-        ...,
-        description=f"Status prosby: {', '.join(s.value for s in LoanRequestStatus)}"
-    )
+    owner_name: str = "Unknown"
+    owner_avatar: Optional[str] = None
+    status: LoanRequestStatus = Field(..., description=f"Status prosby: {', '.join(s.value for s in LoanRequestStatus)}")
     rejection_reason: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    responded_at: Optional[datetime] = None
 
 
 class LoanRequestActionResponse(BaseModel):
@@ -114,15 +114,11 @@ class LoanRequestActionResponse(BaseModel):
 
     success: bool
     message: str
-    request: Optional[LoanRequestResponse] = None
+    data: Optional[LoanRequestResponse] = None
 
 
 class RejectRequestRequest(BaseModel):
-    reason: Optional[str] = Field(
-        None,
-        max_length=500,
-        description="Powod odrzucenia"
-    )
+    reason: Optional[str] = Field(None, max_length=500, description="Powod odrzucenia")
 
 
 class LoanRequestAction(BaseModel):
@@ -155,13 +151,10 @@ class MessageResponse(BaseModel):
     id: UUID
     loan_request_id: UUID
     sender_id: UUID
-    sender_name: str  # Denormalizacja
-    sender_avatar: Optional[str] = None  # Denormalizacja
+    sender_name: str
+    sender_avatar: Optional[str] = None 
     content: str
-    message_type: MessageType = Field(
-        ...,
-        description=f"Typ wiadomości: {', '.join(t.value for t in MessageType)}"
-    )
+    message_type: MessageType = Field(..., description=f"Typ wiadomości: {', '.join(t.value for t in MessageType)}")
     is_read: bool
     created_at: datetime
     updated_at: datetime
