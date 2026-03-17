@@ -268,7 +268,7 @@ class UserBookService:
         valid_statuses = ['available', 'reserved', 'borrowed', 'unavailable', 'lent']
         if new_status not in valid_statuses:
             raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
-        updated = await self.user_book_repo.update(user_book_id, status=new_status)
+        updated = await self.user_book_repo.update(user_book_id, {"status": new_status})
         
         return {
             "id": str(updated.id),

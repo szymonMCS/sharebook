@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
@@ -21,6 +22,13 @@ class BookMetadataUpdate(BaseModel):
     language: str | None = Field(None, description="Language code")
     genre: str | None = Field(None, description="Genre")
     cover_url: str | None = Field(None, description="Cover image URL")
+
+
+class BookCreate(BaseModel):
+    isbn: str = Field(..., description="Book ISBN")
+    title: str | None = Field(None, description="Book title")
+    author: str | None = Field(None, description="Book author")
+    description: str | None = Field(None, description="Book description")
 
 def get_book_admin_service(db: AsyncSession = Depends(get_db)) -> BookAdminService:
     return BookAdminService(db)
@@ -94,4 +102,106 @@ async def delete_book(
     return {
         "success": True,
         "message": "Książka usunięta"
+    }
+
+@router.post("", response_model=dict)
+async def create_book(
+    book_data: BookCreate,
+    current_user: User = Depends(get_current_active_admin),
+    book_service: BookAdminService = Depends(get_book_admin_service)
+):
+    book = await book_service.create_book(book_data.model_dump())
+    return {
+        "success": True,
+        "data": book,
+        "message": "Książka dodana"
+    }
+
+@router.get("/user-books", response_model=dict)
+async def list_user_books(
+    user_id: UUID = Query(None, description="Filter by user ID"),
+    book_id: UUID = Query(None, description="Filter by book ID"),
+    page: int = Query(1, ge=1, description="Page number"),
+    per_page: int = Query(20, ge=1, le=100, description="Items per page"),
+    current_user: User = Depends(get_current_active_admin),
+    book_service: BookAdminService = Depends(get_book_admin_service)
+):
+    result = await book_service.list_user_books(
+        user_id=user_id,
+        book_id=book_id,
+        page=page,
+        per_page=per_page
+    )
+    return {
+        "success": True,
+        "data": {
+            "data": result.data,
+            "total": result.total,
+            "page": result.page,
+            "per_page": result.per_page,
+            "total_pages": result.total_pages
+        },
+        "message": "User books retrieved"
+    }
+
+
+class AddUserBookRequest(BaseModel):
+    user_id: UUID = Field(..., description="User ID to add book to")
+    book_id: UUID = Field(..., description="Book ID to add")
+    condition: str = Field(default="good", description="Book condition")
+    is_lendable: bool = Field(default=True, description="Whether book is lendable")
+
+@router.post("/user-books", response_model=dict)
+async def add_book_to_user(
+    request: AddUserBookRequest,
+    current_user: User = Depends(get_current_active_admin),
+    book_service: BookAdminService = Depends(get_book_admin_service)
+):
+    result = await book_service.add_book_to_user(
+        user_id=request.user_id,
+        book_id=request.book_id,
+        condition=request.condition,
+        is_lendable=request.is_lendable
+    )
+    return {
+        "success": True,
+        "data": result,
+        "message": "Książka dodana do biblioteki użytkownika"
+    }
+
+@router.delete("/user-books/{user_book_id}", response_model=dict)
+async def remove_book_from_user(
+    user_book_id: UUID,
+    force: bool = Query(False, description="Force delete even with active loans"),
+    current_user: User = Depends(get_current_active_admin),
+    book_service: BookAdminService = Depends(get_book_admin_service)
+):
+    result = await book_service.remove_book_from_user(user_book_id, force=force)
+    return {
+        "success": True,
+        "data": result,
+        "message": "Książka usunięta z biblioteki użytkownika"
+    }
+
+
+class UpdateUserBookRequest(BaseModel):
+    status: str = Field(..., description="New status: available, reserved, borrowed, unavailable")
+    is_lendable: Optional[bool] = Field(None, description="Update lendable status")
+
+@router.patch("/user-books/{user_book_id}", response_model=dict)
+async def update_user_book_status(
+    user_book_id: UUID,
+    request: UpdateUserBookRequest,
+    current_user: User = Depends(get_current_active_admin),
+    book_service: BookAdminService = Depends(get_book_admin_service)
+):
+    result = await book_service.update_user_book_status(
+        user_book_id=user_book_id,
+        status=request.status,
+        is_lendable=request.is_lendable
+    )
+    return {
+        "success": True,
+        "data": result,
+        "message": "Status książki zaktualizowany"
     }
