@@ -5,6 +5,9 @@ from typing import Optional, List, TYPE_CHECKING
 if TYPE_CHECKING:
     from src.schemas.loan import LoanResponse, LoanRequestResponse, BorrowedBookResponse, LentBookResponse
 
+BorrowedBookResponse = "BorrowedBookResponse"
+LentBookResponse = "LentBookResponse"
+
 
 class ILoanService(ABC):
     @abstractmethod
@@ -48,12 +51,12 @@ class ILoanService(ABC):
         pass
     
     @abstractmethod
-    async def get_borrowed_books(self, borrower_id: UUID, status: Optional[str] = None) -> List["Loan"]:
+    async def get_borrowed_books(self, borrower_id: UUID, status: Optional[str] = None) -> List["BorrowedBookResponse"]:
         """Get borrowed books with details."""
         pass
     
     @abstractmethod
-    async def get_lent_books(self, lender_id: UUID, status: Optional[str] = None) -> List["Loan"]:
+    async def get_lent_books(self, lender_id: UUID, status: Optional[str] = None) -> List["LentBookResponse"]:
         """Get lent books with details."""
         pass
     
@@ -65,6 +68,11 @@ class ILoanService(ABC):
     @abstractmethod
     async def get_loan_by_id(self, loan_id: UUID) -> Optional["LoanResponse"]:
         """Get a loan by ID (returns None if not found)."""
+        pass
+    
+    @abstractmethod
+    async def create_loan(self, user_book_id: UUID, borrower_id: UUID, lender_id: UUID) -> "LoanResponse":
+        """Create a loan record (low-level)."""
         pass
     
     @abstractmethod

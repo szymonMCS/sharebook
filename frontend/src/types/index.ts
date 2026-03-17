@@ -5,7 +5,6 @@ export interface User {
   first_name: string | null;
   last_name: string | null;
   username?: string;
-  avatar_url?: string;
   role?: 'user' | 'admin';
   is_active?: boolean;
   created_at: string;
@@ -41,6 +40,7 @@ export interface BookInLibrary {
 export interface Book {
   id: string;
   book_id?: string;  // Actual book ID (for enrich endpoint)
+  user_book_id?: string;  // ID kopii książki użytkownika (wymagane do wypożyczenia)
   isbn: string;
   title: string;
   author: string | null;
@@ -61,7 +61,7 @@ export interface Book {
     last_name: string;
     location: string | null;
     username?: string;
-    avatar_url?: string;
+
   };
   condition?: string | null;
   created_at: string;
@@ -99,7 +99,7 @@ export interface UserLibraryItem {
   borrowed_at?: string | null;
   owner_id?: string;
   owner_name?: string;
-  owner_avatar?: string | null;
+
 }
 
 // Add book request (ISBN required!)
@@ -116,9 +116,32 @@ export interface AddBookRequest {
   is_lendable?: boolean;
 }
 
+// Person info (for loan responses)
+export interface PersonInfo {
+  id: string;
+  name: string;
+  location?: string | null;
+}
+
+// Book info for loan responses
+export interface BookInfo {
+  id: string;
+  title: string;
+  author?: string | null;
+  cover_url?: string | null;
+}
+
+// Borrowed/Lent book response
+export interface BorrowedBook {
+  id: string;
+  borrowed_at: string;
+  due_date: string;
+  book: BookInfo;
+  owner: PersonInfo;
+}
+
 // Aliases for backward compatibility
 export type BookCreate = AddBookRequest;
-export type BorrowedBook = UserLibraryItem;
 
 // Chat types
 export interface ChatMessage {
@@ -169,10 +192,10 @@ export interface LoanRequest {
   book_cover_url: string | null;
   owner_id: string;
   owner_name: string;
-  owner_avatar: string | null;
+
   borrower_id: string;
   borrower_name: string;
-  borrower_avatar: string | null;
+
   status: 'pending' | 'reserved' | 'accepted' | 'rejected' | 'cancelled';
   message: string | null;
   reason: string | null;
@@ -199,7 +222,7 @@ export interface Message {
   loan_request_id: string;
   sender_id: string;
   sender_name: string;
-  sender_avatar: string | null;
+  sender_avatar?: string | null;
   content: string;
   message_type: 'text' | 'system';
   is_read: boolean;

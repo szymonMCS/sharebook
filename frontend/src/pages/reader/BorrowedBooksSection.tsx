@@ -59,8 +59,8 @@ const BorrowedBookCard = memo(function BorrowedBookCard({ book }: BorrowedBookCa
         {/* Cover */}
         <div className="w-full sm:w-32 h-48 sm:h-auto flex-shrink-0 p-3">
           <LazyBookCover 
-            coverUrl={book.cover_url} 
-            title={book.title || 'Książka'}
+            coverUrl={book.book?.cover_url} 
+            title={book.book?.title || 'Książka'}
             className="w-full h-full rounded-md overflow-hidden"
           />
         </div>
@@ -70,24 +70,15 @@ const BorrowedBookCard = memo(function BorrowedBookCard({ book }: BorrowedBookCa
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div className="flex-1">
               <h3 className="font-serif font-semibold text-book-brown text-lg mb-1">
-                {book.title}
+                {book.book?.title}
               </h3>
-              <p className="text-book-gray mb-3">{book.author}</p>
+              <p className="text-book-gray mb-3">{book.book?.author}</p>
 
               {/* Owner */}
               <div className="flex items-center gap-2 text-sm text-book-muted mb-3">
                 <User className="w-4 h-4" />
                 <span>Właściciel: </span>
-                <div className="flex items-center gap-1">
-                  {book.owner_avatar && (
-                    <img 
-                      src={book.owner_avatar} 
-                      alt={book.owner_name}
-                      className="w-5 h-5 rounded-full"
-                    />
-                  )}
-                  <span className="font-medium text-book-brown">{book.owner_name}</span>
-                </div>
+                <span className="font-medium text-book-brown">{book.owner?.name || 'Nieznany'}</span>
               </div>
 
               {/* Dates */}
@@ -122,7 +113,7 @@ const BorrowedBookCard = memo(function BorrowedBookCard({ book }: BorrowedBookCa
                 <AlertDialogHeader>
                   <AlertDialogTitle>Zwrócić książkę?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Czy na pewno chcesz zwrócić „{book.title}"? 
+                    Czy na pewno chcesz zwrócić „{book.book?.title}"? 
                     Właściciel zostanie powiadomiony o zwrocie.
                   </AlertDialogDescription>
                 </AlertDialogHeader>

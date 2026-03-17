@@ -36,8 +36,40 @@ class LoanRepository(BaseRepository[Loan], ILoanRepository):
         result = await self._db.execute(query)
         return list(result.scalars().all())
     
+    async def get_borrower_loans_with_details(self, borrower_id: uuid.UUID, status: Optional[str] = None) -> List[Loan]:
+        query = (
+            select(Loan)
+            .options(
+                joinedload(Loan.user_book).joinedload(UserBook.book),
+                joinedload(Loan.lender),
+                joinedload(Loan.borrower)
+            )
+            .where(Loan.borrower_id == borrower_id)
+        )
+        if status:
+            query = query.where(Loan.status == status)
+        query = query.order_by(Loan.created_at.desc())
+        result = await self._db.execute(query)
+        return list(result.scalars().all())
+    
     async def get_lender_loans(self, lender_id: uuid.UUID, status: Optional[str] = None) -> List[Loan]:
         query = select(Loan).where(Loan.lender_id == lender_id)
+        if status:
+            query = query.where(Loan.status == status)
+        query = query.order_by(Loan.created_at.desc())
+        result = await self._db.execute(query)
+        return list(result.scalars().all())
+    
+    async def get_lender_loans_with_details(self, lender_id: uuid.UUID, status: Optional[str] = None) -> List[Loan]:
+        query = (
+            select(Loan)
+            .options(
+                joinedload(Loan.user_book).joinedload(UserBook.book),
+                joinedload(Loan.lender),
+                joinedload(Loan.borrower)
+            )
+            .where(Loan.lender_id == lender_id)
+        )
         if status:
             query = query.where(Loan.status == status)
         query = query.order_by(Loan.created_at.desc())
