@@ -7,7 +7,6 @@ import {
   User, 
   MapPin, 
   Star,
-  Heart,
   Share2,
   Loader2,
   AlertCircle,
@@ -158,11 +157,14 @@ export function BookDetailPage() {
   };
 
   const handleSubmitRequest = async () => {
-    if (!book) return;
+    if (!book || !book.user_book_id) {
+      toast.error('Nie można wysłać prośby o wypożyczenie - brak ID książki');
+      return;
+    }
 
     setIsRequesting(true);
     try {
-      const response = await loansApi.createRequest(book.id, requestMessage.trim() || undefined);
+      const response = await loansApi.createRequest(book.user_book_id, requestMessage.trim() || undefined);
       if (response.success) {
         setRequestSuccess(true);
         setIsMessageModalOpen(false);
@@ -170,7 +172,9 @@ export function BookDetailPage() {
         navigate('/reader/requests');
       }
     } catch (err) {
-      setError('Nie udało się wysłać prośby o wypożyczenie');
+      const errorMessage = err instanceof Error ? err.message : 'Nie udało się wysłać prośby o wypożyczenie';
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsRequesting(false);
     }
@@ -274,6 +278,7 @@ export function BookDetailPage() {
   };
   const isOwner = isAuthenticated && user?.id === book.owner_id;
   const isAvailable = book.status === 'available';
+  const canRequestLoan = isAvailable && book.user_book_id;
 
   return (
     <div className="min-h-screen bg-warm-beige relative">
@@ -355,7 +360,7 @@ export function BookDetailPage() {
 
 
               <div className="flex flex-wrap gap-3">
-                {isAvailable && !isOwner && isAuthenticated && (
+                {canRequestLoan && !isOwner && isAuthenticated && (
                   <Button
                     size="lg"
                     className="bg-book-gold hover:bg-book-gold-hover text-white"
@@ -405,14 +410,15 @@ export function BookDetailPage() {
                   variant="outline"
                   size="icon"
                   className="h-12 w-12"
-                >
-                  <Heart className="w-5 h-5" />
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-12 w-12"
+                  onClick={() => {
+                    const url = window.location.href;
+                    navigator.clipboard.writeText(url).then(() => {
+                      toast.success('Link skopiowany do schowka');
+                    }).catch(() => {
+                      toast.error('Nie udało się skopiować linku');
+                    });
+                  }}
+                  title="Kopiuj link do schowka"
                 >
                   <Share2 className="w-5 h-5" />
                 </Button>

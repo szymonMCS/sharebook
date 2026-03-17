@@ -144,13 +144,14 @@ class LoanRequestService(ILoanRequestService):
             book_cover_url=cover_url,
             owner_id=request.owner_id,
             owner_name=f"{owner.first_name} {owner.last_name}" if owner else "Unknown",
-            owner_avatar=owner.avatar_url if owner else None,
+            owner_avatar=None,
             requester_id=request.requester_id,
             requester_name=f"{requester.first_name} {requester.last_name}" if requester else "Unknown",
-            requester_avatar=requester.avatar_url if requester else None,
+            requester_avatar=None,
             status=request.status,
             message=request.message,
             rejection_reason=request.rejection_reason,
             created_at=request.created_at,
-            responded_at=request.responded_at
+            updated_at=request.updated_at,
+            responded_at=request.updated_at if request.status in ['accepted', 'rejected'] else None
         )

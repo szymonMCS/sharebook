@@ -80,8 +80,8 @@ function LoanRequestCardComponent({
   const isPending = request.status === 'pending' || request.status === 'reserved';
 
   const otherPerson = type === 'incoming' 
-    ? { name: request.borrower_name, avatar: request.borrower_avatar }
-    : { name: request.owner_name, avatar: request.owner_avatar };
+    ? { name: request.borrower_name }
+    : { name: request.owner_name };
 
   return (
     <Card 
@@ -125,17 +125,9 @@ function LoanRequestCardComponent({
 
             {/* Person Info */}
             <div className="flex items-center gap-2 mt-2">
-              {otherPerson.avatar ? (
-                <img 
-                  src={otherPerson.avatar} 
-                  alt={otherPerson.name}
-                  className="w-6 h-6 rounded-full"
-                />
-              ) : (
-                <div className="w-6 h-6 rounded-full bg-stone-200 flex items-center justify-center">
-                  <User className="w-3 h-3 text-stone-500" />
-                </div>
-              )}
+              <div className="w-6 h-6 rounded-full bg-stone-200 flex items-center justify-center">
+                <User className="w-3 h-3 text-stone-500" />
+              </div>
               <span className="text-sm font-medium text-book-brown">
                 {otherPerson.name}
               </span>

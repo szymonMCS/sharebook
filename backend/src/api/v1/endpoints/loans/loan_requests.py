@@ -28,6 +28,7 @@ async def create_loan_request(
     loan_request_service: ILoanRequestService = Depends(get_loan_request_service),
     current_user: User = Depends(verify_csrf_protection)
 ):
+    logger.info(f"[DEBUG] Create loan request - user: {current_user.id}, data: {request_data}")
     request = await loan_request_service.create_request(
         user_book_id=request_data.user_book_id,
         requester_id=current_user.id,
@@ -36,7 +37,7 @@ async def create_loan_request(
     return LoanRequestActionResponse(
         success=True,
         message="Loan request created successfully",
-        request=LoanRequestResponse.model_validate(request)
+        data=request
     )
 
 @router.get("/incoming", response_model=dict)
@@ -118,14 +119,14 @@ async def update_loan_request(
         return LoanRequestActionResponse(
             success=True,
             message="Request accepted. Book has been loaned.",
-            request=LoanRequestResponse.model_validate(request)
+            data=request
         )
     elif action_data.action == "reject":
         request = await loan_request_service.reject_request(request_id=request_id, owner_id=current_user.id, reason=action_data.reason)
         return LoanRequestActionResponse(
             success=True,
             message="Request rejected",
-            request=LoanRequestResponse.model_validate(request)
+            data=request
         )
     else:
         raise ValidationException(f"Unsupported action: {action_data.action}")
@@ -153,7 +154,7 @@ async def cancel_loan_request(
     loan_request_service: ILoanRequestService = Depends(get_loan_request_service),
     current_user: User = Depends(verify_csrf_protection)
 ):
-    success = await loan_request_service.cancel_request(request_id=request_id, borrower_id=current_user.id)
+    success = await loan_request_service.cancel_request(request_id=request_id, requester_id=current_user.id)
     if not success:
         raise ValidationException("Cannot cancel request")
     return {
