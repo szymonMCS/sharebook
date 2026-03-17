@@ -45,6 +45,7 @@ class BookService(IBookService):
         book, user_book, owner = result
         return CommunityBookResponse(
             id=book.id,
+            user_book_id=user_book.id,
             isbn=book.isbn,
             title=book.title,
             author=book.author,
@@ -166,6 +167,7 @@ class BookService(IBookService):
         for book, user_book, owner in book_tuples:
             result.append(CommunityBookResponse(
                 id=book.id,
+                user_book_id=user_book.id,
                 isbn=book.isbn,
                 title=book.title,
                 author=book.author,

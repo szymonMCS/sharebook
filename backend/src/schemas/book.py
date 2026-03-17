@@ -119,6 +119,8 @@ class CommunityBookResponse(BookBase):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
     
     id: UUID
+    user_book_id: UUID = Field(..., description="ID of the user's book copy for loan requests")
+    isbn: Optional[str] = None
     cover_url: Optional[str] = None
     publisher: Optional[str] = None
     publication_year: Optional[int] = None
