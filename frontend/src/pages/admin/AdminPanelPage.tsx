@@ -1,17 +1,19 @@
 import { useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
   BookOpen,
+  Library,
   Shield,
   Menu,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Navbar } from '@/components/layout/Navbar';
 import { FloatingBooks, GradientOrbs } from '@/components/layout/FloatingBooks';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { useAuth } from '@/components/auth/AuthContext';
 
 interface NavItem {
   id: string;
@@ -24,10 +26,18 @@ const navItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { id: 'users', label: 'Użytkownicy', href: '/admin/users', icon: Users },
   { id: 'books', label: 'Książki', href: '/admin/books', icon: BookOpen },
+  { id: 'user-books', label: 'Książki użytkowników', href: '/admin/user-books', icon: Library },
 ];
 
 function Sidebar({ className }: { className?: string }) {
   const location = useLocation();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   return (
     <div className={cn("flex flex-col h-full", className)}>
@@ -72,7 +82,15 @@ function Sidebar({ className }: { className?: string }) {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-stone-200/60">
+      <div className="p-4 border-t border-stone-200/60 space-y-2">
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start gap-2 text-book-gray hover:text-red-600"
+          onClick={handleLogout}
+        >
+          <LogOut className="w-4 h-4" />
+          Wyloguj
+        </Button>
         <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-4">
           <p className="text-xs text-book-muted text-center">
             Panel administracyjny ShareBook
@@ -109,19 +127,18 @@ export function AdminPanelPage() {
     <div className="min-h-screen bg-warm-beige relative">
       <FloatingBooks />
       <GradientOrbs />
-      <Navbar />
 
-      <main className="relative z-10 pt-16 lg:pt-20">
+      <main className="relative z-10 pt-4 lg:pt-8">
         <div className="flex min-h-[calc(100vh-80px)]">
           {/* Desktop Sidebar */}
-          <aside className="hidden lg:block w-72 bg-white/80 backdrop-blur-md border-r border-stone-200/60 sticky top-20 h-[calc(100vh-80px)]">
+          <aside className="hidden lg:block w-72 bg-white/80 backdrop-blur-md border-r border-stone-200/60 sticky top-4 h-[calc(100vh-32px)]">
             <Sidebar />
           </aside>
 
           {/* Main Content */}
           <div className="flex-1">
             {/* Mobile Header */}
-            <div className="lg:hidden px-4 py-4 border-b border-stone-200/60 bg-white/80 backdrop-blur-md sticky top-16 z-20">
+            <div className="lg:hidden px-4 py-4 border-b border-stone-200/60 bg-white/80 backdrop-blur-md sticky top-0 z-20">
               <div className="flex items-center gap-3">
                 <MobileNav />
                 <div className="flex items-center gap-2">

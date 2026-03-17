@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { BookOpen, Trash2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { BookOpen, Trash2, ChevronLeft, ChevronRight, Search, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,6 +14,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -34,6 +43,15 @@ export function BooksSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [bookToDelete, setBookToDelete] = useState<AdminBook | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newBook, setNewBook] = useState({
+    isbn: '',
+    title: '',
+    author: '',
+    description: ''
+  });
 
   const fetchBooks = async (currentPage: number) => {
     try {
@@ -55,7 +73,6 @@ export function BooksSection() {
     fetchBooks(page);
   }, [page]);
 
-  // Filter books based on search query
   useEffect(() => {
     if (searchQuery.trim() === '') {
       setFilteredBooks(books);
@@ -66,8 +83,7 @@ export function BooksSection() {
           (book) =>
             book.title.toLowerCase().includes(query) ||
             book.author.toLowerCase().includes(query) ||
-            book.owner_name.toLowerCase().includes(query) ||
-            book.owner_email.toLowerCase().includes(query)
+            book.isbn?.toLowerCase().includes(query)
         )
       );
     }
@@ -89,6 +105,30 @@ export function BooksSection() {
     }
   };
 
+  const handleAddBook = async () => {
+    if (!newBook.isbn.trim()) {
+      setError('ISBN jest wymagany');
+      return;
+    }
+
+    try {
+      setIsAdding(true);
+      await adminApi.addBook({
+        isbn: newBook.isbn,
+        title: newBook.title || undefined,
+        author: newBook.author || undefined,
+        description: newBook.description || undefined
+      });
+      setNewBook({ isbn: '', title: '', author: '', description: '' });
+      setIsAddDialogOpen(false);
+      fetchBooks(page);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Błąd dodawania książki');
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
   const getStatusBadge = (status: AdminBook['status']) => {
     const config = {
       available: { label: 'Dostępna', className: 'bg-green-100 text-green-800 border-green-200' },
@@ -106,22 +146,23 @@ export function BooksSection() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-serif font-bold text-book-brown">Książki</h1>
           <p className="text-book-muted mt-1">Zarządzaj wszystkimi książkami w systemie</p>
         </div>
+        <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2">
+          <Plus className="w-4 h-4" />
+          Dodaj książkę
+        </Button>
       </div>
 
-      {/* Error */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600 text-sm">
           {error}
         </div>
       )}
 
-      {/* Books Table */}
       <Card className="bg-white border-stone-200/60">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -167,8 +208,7 @@ export function BooksSection() {
                     <TableRow>
                       <TableHead>Książka</TableHead>
                       <TableHead>Autor</TableHead>
-                      <TableHead>Właściciel</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>ISBN</TableHead>
                       <TableHead className="text-right">Akcje</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -178,35 +218,30 @@ export function BooksSection() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-14 bg-stone-100 rounded overflow-hidden flex-shrink-0">
-                              <img
-                                src={`https://covers.openlibrary.org/b/id/${book.id}-S.jpg`}
-                                alt={book.title}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = '/placeholder-book.png';
-                                }}
-                              />
+                              {book.cover_url ? (
+                                <img
+                                  src={book.cover_url}
+                                  alt={book.title}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-stone-400 text-xs">
+                                  Brak
+                                </div>
+                              )}
                             </div>
                             <div>
                               <p className="font-medium text-book-brown line-clamp-1">
                                 {book.title}
                               </p>
-                              {book.is_lendable && (
-                                <Badge variant="outline" className="text-xs mt-1">
-                                  Do pożyczenia
-                                </Badge>
-                              )}
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="text-book-gray">{book.author}</TableCell>
-                        <TableCell>
-                          <div className="text-book-gray">
-                            <p className="font-medium">{book.owner_name}</p>
-                            <p className="text-xs text-book-muted">{book.owner_email}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>{getStatusBadge(book.status)}</TableCell>
+                        <TableCell className="text-book-gray">{book.author || '-'}</TableCell>
+                        <TableCell className="text-book-gray text-sm">{book.isbn || '-'}</TableCell>
                         <TableCell className="text-right">
                           <Button
                             variant="ghost"
@@ -223,7 +258,6 @@ export function BooksSection() {
                 </Table>
               </div>
 
-              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-6 pt-4 border-t border-stone-200">
                   <p className="text-sm text-book-muted">
@@ -254,7 +288,6 @@ export function BooksSection() {
         </CardContent>
       </Card>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!bookToDelete} onOpenChange={() => setBookToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -262,10 +295,6 @@ export function BooksSection() {
             <AlertDialogDescription>
               Czy na pewno chcesz usunąć książkę <strong>"{bookToDelete?.title}"</strong>?
               <br />
-              Autor: {bookToDelete?.author}
-              <br />
-              Właściciel: {bookToDelete?.owner_name}
-              <br /><br />
               Tej akcji nie można cofnąć.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -281,6 +310,63 @@ export function BooksSection() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Dodaj nową książkę</DialogTitle>
+            <DialogDescription>
+              Wprowadź dane książki. ISBN jest wymagany.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="isbn">ISBN *</Label>
+              <Input
+                id="isbn"
+                placeholder="np. 978-83-0123-456-7"
+                value={newBook.isbn}
+                onChange={(e) => setNewBook({ ...newBook, isbn: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="title">Tytuł</Label>
+              <Input
+                id="title"
+                placeholder="Tytuł książki"
+                value={newBook.title}
+                onChange={(e) => setNewBook({ ...newBook, title: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="author">Autor</Label>
+              <Input
+                id="author"
+                placeholder="Imię i nazwisko autora"
+                value={newBook.author}
+                onChange={(e) => setNewBook({ ...newBook, author: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Opis</Label>
+              <Input
+                id="description"
+                placeholder="Krótki opis książki"
+                value={newBook.description}
+                onChange={(e) => setNewBook({ ...newBook, description: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+              Anuluj
+            </Button>
+            <Button onClick={handleAddBook} disabled={isAdding}>
+              {isAdding ? 'Dodawanie...' : 'Dodaj książkę'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
