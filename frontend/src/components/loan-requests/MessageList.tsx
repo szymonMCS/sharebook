@@ -54,22 +54,12 @@ function MessageListComponent({ messages, currentUserId }: MessageListProps) {
           >
             <div className={`flex gap-2 max-w-[85%] ${isMine ? 'flex-row-reverse' : ''}`}>
               {/* Avatar - only show for first message from sender */}
-              {showAvatar ? (
+              {showAvatar && (
                 <div className="flex-shrink-0">
-                  {message.sender_avatar ? (
-                    <img 
-                      src={message.sender_avatar} 
-                      alt={message.sender_name}
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center">
-                      <User className="w-4 h-4 text-stone-500" />
-                    </div>
-                  )}
+                  <div className="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center">
+                    <User className="w-4 h-4 text-stone-500" />
+                  </div>
                 </div>
-              ) : (
-                <div className="w-8 flex-shrink-0" /> // Spacer
               )}
 
               {/* Message bubble */}

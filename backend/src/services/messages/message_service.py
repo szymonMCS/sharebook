@@ -39,7 +39,7 @@ class MessageService(IMessageService):
         book_title = "Unknown Book"
         if self._user_book_repo:
             try:
-                user_book = await self._user_book_repo.get_by_id(request.user_book_id)
+                user_book = await self._user_book_repo.get_by_id_with_relations(request.user_book_id)
                 if user_book and user_book.book:
                     book_title = user_book.book.title
             except Exception as e:
@@ -110,5 +110,6 @@ class MessageService(IMessageService):
             content=message.content,
             message_type=message.message_type,
             is_read=message.is_read,
-            created_at=message.created_at
+            created_at=message.created_at,
+            updated_at=message.updated_at
         )

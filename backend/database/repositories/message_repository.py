@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
-from database.models import Message, LoanRequest
+from database.models import Message, LoanRequest, User
 from database.interfaces import IMessageRepository
 
 
@@ -56,14 +56,12 @@ class MessageRepository(IMessageRepository):
             await self._db.commit()
         return count
     
-    async def get_by_loan_request(self, loan_request_id: uuid.UUID, skip: int = 0, limit: int = 100,) -> List[Message]:
-        result = await self._db.execute(
-            select(Message)
-            .where(Message.loan_request_id == loan_request_id)
-            .order_by(Message.created_at.asc())
-            .offset(skip)
-            .limit(limit)
-        )
+    async def get_by_loan_request(self, loan_request_id: uuid.UUID, skip: int = 0, limit: int = 100, include_sender: bool = False,) -> List[Message]:
+        stmt = select(Message).where(Message.loan_request_id == loan_request_id)
+        if include_sender:
+            stmt = stmt.options(joinedload(Message.sender))
+        stmt = stmt.order_by(Message.created_at.asc()).offset(skip).limit(limit)
+        result = await self._db.execute(stmt)
         return list(result.scalars().all())
     
     async def get_unread_messages_for_user(self, user_id: uuid.UUID,) -> List[Message]:
