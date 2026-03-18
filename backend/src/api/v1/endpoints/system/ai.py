@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.deps import get_db, get_current_active_user, get_current_active_admin
 from src.services.ai import VectorService, AIService
-from database.models import User
+from database.models import User, Book, BookChunk
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -44,9 +45,9 @@ async def chat_with_ai(
     result = await ai_service.get_recommendation(request.message)
     return ChatResponse(
         success=True,
-        answer=result["answer"],
-        sources=result["sources"],
-        model_used=result["model_used"]
+        answer=result.answer,
+        sources=result.sources,
+        model_used=getattr(result, 'model_used', 'gpt-4o')
     )
 
 
@@ -69,5 +70,11 @@ async def sync_vector_db(
     current_user: User = Depends(get_current_active_admin)
 ):
     vector_service = VectorService(db)
-    stats = await vector_service.sync_all_books()
-    return SyncResponse(success=True, **stats)
+    indexed = await vector_service.sync_all_books()
+    return SyncResponse(
+        success=True,
+        total_books=await db.scalar(select(func.count()).select_from(Book)),
+        indexed_books=indexed,
+        total_chunks=await db.scalar(select(func.count()).select_from(BookChunk)),
+        errors=[]
+    )

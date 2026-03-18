@@ -29,12 +29,7 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleUnauthorized = () => {
       setUser(null);
-      // Only redirect to login if on protected page
-      const publicPaths = ['/', '/browse', '/books', '/about', '/how-it-works', '/login', '/register'];
-      const isPublicPage = publicPaths.some(path => location.pathname === path || location.pathname.startsWith('/books/'));
-      if (!isPublicPage) {
-        navigate('/login', { replace: true });
-      }
+      navigate('/login', { replace: true });
     };
 
     window.addEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
@@ -63,13 +58,19 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    if (!loading && user && location.pathname === '/login') {
+      navigate('/reader', { replace: true });
+    }
+  }, [loading, user, location.pathname, navigate]);
+
   const login = async (email: string, password: string) => {
     const res = await authApi.login(email, password);
     if (!res.success || !res.data?.user) {
       throw new Error(res.error || 'Nieprawidłowy email lub hasło');
     }
-    // Token is automatically set in HTTP-only cookie by backend
     setUser(res.data.user);
+    navigate('/reader', { replace: true });
   };
 
   const register = async (data: { email: string; password: string; first_name: string; last_name: string; location?: string; phone?: string }) => {
@@ -77,8 +78,8 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
     if (!res.success || !res.data?.user) {
       throw new Error(res.error || 'Rejestracja nie powiodła się');
     }
-    // Token is automatically set in HTTP-only cookie by backend
     setUser(res.data.user);
+    navigate('/reader', { replace: true });
   };
 
   const logout = async () => {

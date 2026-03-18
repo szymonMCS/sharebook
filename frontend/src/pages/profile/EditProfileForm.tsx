@@ -60,7 +60,7 @@ export function EditProfileForm({ user, onSuccess }: EditProfileFormProps) {
     setIsLoading(true);
     
     try {
-      const response = await api.patch<{ success: boolean; data?: User; error?: string }>(
+      const response = await api.patch<{ success: boolean; data?: { user: User }; error?: string }>(
         '/users/me',
         data
       );

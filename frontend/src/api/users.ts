@@ -39,22 +39,13 @@ export const usersApi = {
 
   /**
    * Update current user's profile
-   * Note: Backend requires user_id in URL, so we first get /users/me, then PATCH /users/{id}
-   * PATCH /api/v1/users/{user_id}
+   * PATCH /api/v1/users/me
    */
-  updateProfile: async (data: UserUpdateData): Promise<ApiResponse<User>> => {
-    // First get current user to get the ID
-    const meResponse = await usersApi.getProfile();
-    if (!meResponse.success || !meResponse.data?.user) {
-      throw new Error('Nie udało się pobrać danych użytkownika');
-    }
-    const userId = meResponse.data.user.id;
-    
-    return apiClient<ApiResponse<User>>(`/users/${userId}`, {
+  updateProfile: (data: UserUpdateData) =>
+    apiClient<ApiResponse<{ user: User }>>('/users/me', {
       method: 'PATCH',
       body: data,
-    });
-  },
+    }),
 
   /**
    * Change current user's password

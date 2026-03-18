@@ -30,6 +30,30 @@ async def get_me(current_user: User = Depends(get_current_active_user)):
         }
     }
 
+@router.patch("/me", response_model=dict, summary="Update current user profile")
+async def update_me(
+    user_update: UserUpdate,
+    current_user: User = Depends(get_current_active_user),
+    user_service: IAuthService = Depends(get_auth_service),
+):
+    updated = await user_service.update_profile(current_user.id, user_update)
+    return {
+        "success": True,
+        "data": {
+            "user": {
+                "id": str(updated.id),
+                "email": updated.email,
+                "first_name": updated.first_name,
+                "last_name": updated.last_name,
+                "role": updated.role,
+                "is_active": updated.is_active,
+                "location": updated.location,
+                "phone": updated.phone,
+                "created_at": updated.created_at.isoformat() if updated.created_at else None,
+            }
+        }
+    }
+
 @router.get("/{user_id}", response_model=UserResponse, summary="Get user by ID")
 async def get_user(user_id: UUID, current_user: User = Depends(get_current_active_user), user_service: IAuthService = Depends(get_auth_service),):
     if not _can_access_user_resource(current_user, user_id):
