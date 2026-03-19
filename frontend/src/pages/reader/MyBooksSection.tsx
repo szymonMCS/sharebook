@@ -1,12 +1,23 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Settings2 } from 'lucide-react';
+import { Plus, Settings2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 import { AddBookDialog } from './AddBookDialog';
 
 import { useMyBooks } from '@/hooks/useUserBooks';
+import { useUserBooksStore } from '@/store/userBooksStore';
 import { LazyBookCover } from '@/components/books/LazyBookCover';
 import type { UserLibraryItem } from '@/types';
 
@@ -30,22 +41,35 @@ const BookStatusBadge = ({ status }: { status: string }) => {
 
 interface UserBookCardProps {
   item: UserLibraryItem;
+  onDelete: (id: string) => void;
 }
 
-const UserBookCard = ({ item }: UserBookCardProps) => {
+const UserBookCard = ({ item, onDelete }: UserBookCardProps) => {
   const navigate = useNavigate();
   const { book, status, is_lendable } = item;
   
   const handleCardClick = () => {
-    // Navigate to book details using user_book.id (not book.id) to handle multiple copies
     navigate(`/books/${item.id}`);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete(item.id);
   };
 
   return (
     <div 
-      className="group bg-white rounded-xl shadow-sm border border-stone-200/60 overflow-hidden hover:shadow-md transition-all cursor-pointer"
+      className="group bg-white rounded-xl shadow-sm border border-stone-200/60 overflow-hidden hover:shadow-md transition-all cursor-pointer relative"
       onClick={handleCardClick}
     >
+      {/* Delete button */}
+      <button
+        onClick={handleDeleteClick}
+        className="absolute top-2 right-2 z-10 w-8 h-8 bg-white/90 hover:bg-red-50 rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+        title="Usuń z biblioteki"
+      >
+        <Trash2 className="w-4 h-4 text-red-500" />
+      </button>
       {/* Cover */}
       <div className="relative aspect-[3/4] overflow-hidden bg-stone-100">
         <LazyBookCover 
@@ -86,12 +110,17 @@ const UserBookCard = ({ item }: UserBookCardProps) => {
 
 export function MyBooksSection() {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [bookToDelete, setBookToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const { 
     data: books = [], 
     isLoading, 
+    error: _error,
     refetch
   } = useMyBooks();
+  
+  const { removeBook } = useUserBooksStore();
 
   // Stats - count both 'lent' and 'borrowed' as borrowed
   const stats = useMemo(() => {
@@ -100,6 +129,21 @@ export function MyBooksSection() {
     const lent = books.filter((b: UserLibraryItem) => b.status === 'lent' || b.status === 'borrowed').length;
     return { total, available, lent };
   }, [books]);
+
+  const handleDelete = async () => {
+    if (!bookToDelete) return;
+    
+    try {
+      setIsDeleting(true);
+      await removeBook(bookToDelete);
+      await refetch();
+    } catch (err) {
+      console.error('Failed to delete book:', err);
+    } finally {
+      setIsDeleting(false);
+      setBookToDelete(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -171,6 +215,7 @@ export function MyBooksSection() {
             <UserBookCard 
               key={item.id} 
               item={item} 
+              onDelete={setBookToDelete}
             />
           ))}
         </div>
@@ -182,6 +227,30 @@ export function MyBooksSection() {
         onOpenChange={setShowAddDialog}
         onBookAdded={refetch}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!bookToDelete} onOpenChange={() => setBookToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Usunąć książkę?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Czy na pewno chcesz usunąć tę książkę z biblioteki?
+              <br /><br />
+              Tej akcji nie można cofnąć.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? 'Usuwanie...' : 'Usuń'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

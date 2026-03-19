@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { booksApi } from '@/api/books';
 import { loansApi } from '@/api/loans';
-import type { UserLibraryItem, AddBookRequest, LoanRequest } from '@/types';
+import type { UserLibraryItem, AddBookRequest, LoanRequest, BorrowedBook } from '@/types';
 
 interface User {
   id: string;
@@ -12,8 +12,8 @@ interface User {
 
 interface UserBooksState {
   books: UserLibraryItem[];
-  borrowedBooks: UserLibraryItem[];
-  lentBooks: UserLibraryItem[];
+  borrowedBooks: BorrowedBook[];
+  lentBooks: BorrowedBook[];
   incomingRequests: LoanRequest[];
   outgoingRequests: LoanRequest[];
   user: User | null;

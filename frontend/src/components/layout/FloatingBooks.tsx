@@ -87,32 +87,4 @@ export function GradientOrbs() {
   );
 }
 
-export function DecorativeCircles() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {/* Animated circle 1 */}
-      <div 
-        className="absolute top-20 right-20 w-32 h-32 border border-book-gold/20 rounded-full"
-        style={{
-          animation: 'spin 20s linear infinite',
-        }}
-      />
-      
-      {/* Animated circle 2 */}
-      <div 
-        className="absolute top-28 right-28 w-20 h-20 border border-book-gold/15 rounded-full"
-        style={{
-          animation: 'spin 15s linear infinite reverse',
-        }}
-      />
-      
-      {/* Dotted circle */}
-      <div 
-        className="absolute bottom-40 left-10 w-24 h-24 border-2 border-dashed border-book-gold/20 rounded-full"
-        style={{
-          animation: 'spin 25s linear infinite',
-        }}
-      />
-    </div>
-  );
-}
+

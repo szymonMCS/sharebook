@@ -40,16 +40,13 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        console.log('[Auth] Checking auth via /users/me');
         const res = await authApi.me();
-        console.log('[Auth] Me response:', res.success, res.data?.user?.email);
         if (res.success && res.data?.user) {
           setUser(res.data.user);
         } else {
           setUser(null);
         }
       } catch (err) {
-        console.log('[Auth] API error:', err instanceof Error ? err.message : err);
         setUser(null);
       } finally {
         setLoading(false);
@@ -154,7 +151,7 @@ function ClerkAuthContent({
 }) {
   const { user: clerkUser, isLoaded } = useUser();
   const { signOut } = useClerkAuth();
-  const { session, isSignedIn } = useSession();
+  const { isSignedIn } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
   

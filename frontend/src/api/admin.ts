@@ -33,6 +33,23 @@ export interface AdminBook {
   updated_at: string;
 }
 
+export interface AdminUserBook {
+  user_book_id: string;
+  user_id: string;
+  user_email: string;
+  user_name: string;
+  book_id: string;
+  book_title: string;
+  book_author: string;
+  book_isbn?: string;
+  book_cover_url?: string;
+  status: 'available' | 'reserved' | 'borrowed' | 'unavailable';
+  condition?: string;
+  is_lendable: boolean;
+  has_active_loan: boolean;
+  added_at: string;
+}
+
 export interface ResetPasswordResponse {
   temp_password: string;
 }
@@ -119,6 +136,43 @@ export const adminApi = {
   deleteBook: (id: string, force: boolean = false) =>
     apiClient<ApiResponse<void>>(`/admin/books/${id}?force=${force}`, { 
       method: 'DELETE' 
+    }),
+
+  // Add book - POST /admin/books
+  addBook: (data: { isbn: string; title?: string; author?: string; description?: string }) =>
+    apiClient<ApiResponse<AdminBook>>('/admin/books', {
+      method: 'POST',
+      body: data
+    }),
+
+  // ========== USER BOOKS MANAGEMENT ==========
+  
+  // List user books - GET /admin/books/user-books
+  getUserBooks: (params?: { user_id?: string; book_id?: string; page?: number; per_page?: number }) => {
+    let url = '/admin/books/user-books?page=' + (params?.page || 1) + '&per_page=' + (params?.per_page || 20);
+    if (params?.user_id) url += `&user_id=${params.user_id}`;
+    if (params?.book_id) url += `&book_id=${params.book_id}`;
+    return apiClient<ApiResponse<PaginatedResponse<AdminUserBook>>>(url);
+  },
+
+  // Add book to user - POST /admin/books/user-books
+  addBookToUser: (userId: string, bookId: string, condition: string = 'good', isLendable: boolean = true) =>
+    apiClient<ApiResponse<{ user_book_id: string; message: string }>>('/admin/books/user-books', {
+      method: 'POST',
+      body: { user_id: userId, book_id: bookId, condition, is_lendable: isLendable }
+    }),
+
+  // Remove book from user - DELETE /admin/books/user-books/{user_book_id}
+  removeBookFromUser: (userBookId: string, force: boolean = false) =>
+    apiClient<ApiResponse<{ user_book_id: string; message: string }>>(`/admin/books/user-books/${userBookId}?force=${force}`, {
+      method: 'DELETE'
+    }),
+
+  // Update user book status - PATCH /admin/books/user-books/{user_book_id}
+  updateUserBookStatus: (userBookId: string, status: string, isLendable?: boolean) =>
+    apiClient<ApiResponse<{ user_book_id: string; status: string; message: string }>>(`/admin/books/user-books/${userBookId}`, {
+      method: 'PATCH',
+      body: { status, is_lendable: isLendable }
     }),
 
   // NOTE: /admin/loans endpoint does not exist in backend

@@ -118,7 +118,7 @@ export function UsersSection() {
       await adminApi.updateUserRole(userToChangeRole.id, newRole as 'admin' | 'reader');
       setUsers((prev) =>
         prev.map((u) =>
-          u.id === userToChangeRole.id ? { ...u, role: newRole as 'admin' | 'user' } : u
+          u.id === userToChangeRole.id ? { ...u, role: newRole as 'admin' | 'reader' } : u
         )
       );
       setUserToChangeRole(null);

@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   BookOpen, 
   BookMarked, 
   Inbox, 
   Library,
   Menu,
-  Share2
+  Share2,
+  LogOut,
+  Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/layout/Navbar';
 import { FloatingBooks, GradientOrbs } from '@/components/layout/FloatingBooks';
+import { useAuth } from '@/components/auth/AuthContext';
 import { useUserBooksStore } from '@/store/userBooksStore';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +36,14 @@ const navItems: NavItem[] = [
 
 function Sidebar({ className }: { className?: string }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout, isAdmin } = useAuth();
   const { incomingRequests, outgoingRequests } = useUserBooksStore();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
   
   // Guard against undefined values (happens after registration before data is loaded)
   const safeIncoming = incomingRequests || [];
@@ -102,7 +112,29 @@ function Sidebar({ className }: { className?: string }) {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-stone-200/60">
+      <div className="p-4 border-t border-stone-200/60 space-y-2">
+        {isAdmin && (
+          <NavLink
+            to="/admin"
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+              location.pathname.startsWith('/admin')
+                ? "bg-red-100 text-red-700"
+                : "text-book-gray hover:bg-stone-100 hover:text-book-brown"
+            )}
+          >
+            <Shield className="w-5 h-5" />
+            <span className="font-medium flex-1">Panel Admina</span>
+          </NavLink>
+        )}
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start gap-2 text-book-gray hover:text-red-600"
+          onClick={handleLogout}
+        >
+          <LogOut className="w-4 h-4" />
+          Wyloguj
+        </Button>
         <div className="bg-gradient-to-br from-book-gold/5 to-book-brown/5 rounded-xl p-4">
           <p className="text-xs text-book-muted text-center">
             Udostępniaj książki i odkrywaj nowe historie

@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { ApiResponse, LoanRequest, BorrowedBook, UserBook, MessageThread, Message } from '@/types';
+import type { ApiResponse, LoanRequest, BorrowedBook, MessageThread, Message } from '@/types';
 
 // Types matching backend schemas
 export interface LoanRequestCreate {
