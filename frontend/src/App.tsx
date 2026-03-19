@@ -26,6 +26,7 @@ import { AdminPanelPage } from '@/pages/admin/AdminPanelPage';
 import { DashboardSection } from '@/pages/admin/DashboardSection';
 import { UsersSection } from '@/pages/admin/UsersSection';
 import { BooksSection } from '@/pages/admin/BooksSection';
+import { UserBooksSection } from '@/pages/admin/UserBooksSection';
 
 // AI Chat
 import { AIChatPage } from '@/pages/ai/AIChatPage';
@@ -61,48 +62,41 @@ function App() {
       <AuthProvider>
         <ErrorBoundary>
           <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/how-it-works" element={<HowItWorksPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          
-          {/* Protected routes - Reader Panel */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/reader" element={<ReaderPanelPage />}>
-              <Route index element={<Navigate to="my-books" replace />} />
-              <Route path="my-books" element={<MyBooksSection />} />
-              <Route path="borrowed" element={<BorrowedBooksSection />} />
-              <Route path="lent" element={<LentBooksSection />} />
-              <Route path="requests" element={<LoanRequestsSection />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/how-it-works" element={<HowItWorksPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            
+            {/* Protected routes - Reader Panel */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/reader" element={<ReaderPanelPage />}>
+                <Route index element={<Navigate to="my-books" replace />} />
+                <Route path="my-books" element={<MyBooksSection />} />
+                <Route path="borrowed" element={<BorrowedBooksSection />} />
+                <Route path="lent" element={<LentBooksSection />} />
+                <Route path="requests" element={<LoanRequestsSection />} />
+              </Route>
+              <Route path="/ai-librarian" element={<AIChatPage />} />
+              <Route path="/browse" element={<BrowsePage />} />
+              <Route path="/books/:id" element={<BookDetailPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
             </Route>
-          </Route>
 
-          {/* Admin routes (protected) */}
-          <Route element={<ProtectedAdminRoute />}>
-            <Route path="/admin" element={<AdminPanelPage />}>
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<DashboardSection />} />
-              <Route path="users" element={<UsersSection />} />
-              <Route path="books" element={<BooksSection />} />
+            {/* Admin routes (admin sees everything user sees + admin panel) */}
+            <Route element={<ProtectedAdminRoute />}>
+              <Route path="/admin" element={<AdminPanelPage />}>
+                <Route index element={<Navigate to="dashboard" replace />} />
+                <Route path="dashboard" element={<DashboardSection />} />
+                <Route path="users" element={<UsersSection />} />
+                <Route path="books" element={<BooksSection />} />
+                <Route path="user-books" element={<UserBooksSection />} />
+              </Route>
             </Route>
-          </Route>
 
-          {/* Browse Books (public) */}
-          <Route path="/browse" element={<BrowsePage />} />
-          <Route path="/books/:id" element={<BookDetailPage />} />
-
-          {/* AI Chat (public) */}
-          <Route path="/ai-librarian" element={<AIChatPage />} />
-
-          {/* Profile (protected) */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/profile" element={<ProfilePage />} />
-          </Route>
-
-          {/* Catch all redirect */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Catch all redirect */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </ErrorBoundary>
       </AuthProvider>
     </BrowserRouter>

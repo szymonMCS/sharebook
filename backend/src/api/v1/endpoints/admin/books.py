@@ -13,6 +13,7 @@ router = APIRouter()
 
 
 class BookMetadataUpdate(BaseModel):
+    isbn: str | None = Field(None, description="Book ISBN")
     title: str | None = Field(None, description="Book title")
     author: str | None = Field(None, description="Book author")
     description: str | None = Field(None, description="Book description")

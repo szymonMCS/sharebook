@@ -82,7 +82,7 @@ export function BookManagementModal({
     } finally {
       setIsChangingStatus(false);
     }
-  };
+  }
 
   const handleDelete = async () => {
     setIsDeleting(true);

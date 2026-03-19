@@ -237,7 +237,7 @@ class BookRepository(IBookRepository):
         if search:
             query = query.where(
                 (Book.title.ilike(f"%{search}%")) |
-                (Book.authors.ilike(f"%{search}%")) |
+                (Book.author.ilike(f"%{search}%")) |
                 (Book.isbn.ilike(f"%{search}%"))
             )
         

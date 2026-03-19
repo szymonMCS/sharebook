@@ -5,7 +5,6 @@ from .books import (
     UserBookService,
     GoogleBooksService,
     GoogleBooksServiceFactory,
-    MockBookMetadataProvider,
     GoogleBooksClient,
     get_google_books_service,
 )

@@ -52,7 +52,7 @@ export const usersApi = {
    * Note: Backend doesn't have a separate endpoint, using PATCH /users/{user_id}
    * This might not work depending on backend implementation
    */
-  changePassword: async (data: PasswordChangeData): Promise<ApiResponse<void>> => {
+  changePassword: async (_data: PasswordChangeData): Promise<ApiResponse<void>> => {
     // First get current user to get the ID
     const meResponse = await usersApi.getProfile();
     if (!meResponse.success || !meResponse.data?.user) {

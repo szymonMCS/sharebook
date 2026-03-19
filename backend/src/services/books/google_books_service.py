@@ -194,32 +194,6 @@ class GoogleBooksServiceFactory(IMetadataProviderFactory):
         return GoogleBooksService()
 
 
-class MockBookMetadataProvider(IBookMetadataProvider):
-    def __init__(self, data: dict = None):
-        self._data = data or {
-            "9788328709576": BookMetadata(
-                isbn="9788328709576",
-                title="Wiedźmin - Ostatnie Życzenie",
-                author="Andrzej Sapkowski",
-                description="Zbiór opowiadań fantasy...",
-                publisher="SuperNOWA",
-                publication_year=2014,
-                page_count=352,
-                language="pl",
-                genre="Fantasy"
-            )
-        }
-    
-    async def fetch_by_isbn(self, isbn: str) -> Optional[BookMetadata]:
-        return self._data.get(isbn)
-    
-    async def search_by_title(self, title: str, max_results: int = 10) -> List[BookMetadata]:
-        results = []
-        for metadata in self._data.values():
-            if title.lower() in metadata.title.lower():
-                results.append(metadata)
-        return results[:max_results]
-
 _google_books_service: Optional[GoogleBooksService] = None
 
 def get_google_books_service() -> GoogleBooksService:

@@ -27,7 +27,7 @@ const BookCard = memo(function BookCard({ book, onRequestBorrow }: BookCardProps
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const status = statusConfig[book.status];
-  const isAvailable = book.status === 'available' && book.is_lendable;
+  const isAvailable = book.status === 'available' && book.is_lendable && book.user_book_id;
 
   const handleCardClick = () => {
     navigate(`/books/${book.id}`);
@@ -142,7 +142,7 @@ export function BookGrid({ books, isLoading, onRequestBorrow }: BookGridProps) {
   );
 
   const handleRequestClick = (book: Book) => {
-    if (book.status === 'available' && book.is_lendable) {
+    if (book.status === 'available' && book.is_lendable && book.user_book_id) {
       setSelectedBook(book);
     }
   };

@@ -8,6 +8,7 @@ import {
   Shield,
   Menu,
   LogOut,
+  Home,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -83,6 +84,16 @@ function Sidebar({ className }: { className?: string }) {
 
       {/* Footer */}
       <div className="p-4 border-t border-stone-200/60 space-y-2">
+        <NavLink
+          to="/dashboard"
+          className={cn(
+            "flex items-center gap-2 px-3 py-2 rounded-lg transition-all",
+            "text-book-gray hover:bg-stone-100 hover:text-book-brown"
+          )}
+        >
+          <Home className="w-4 h-4" />
+          <span className="text-sm font-medium">Powrót do aplikacji</span>
+        </NavLink>
         <Button 
           variant="ghost" 
           className="w-full justify-start gap-2 text-book-gray hover:text-red-600"

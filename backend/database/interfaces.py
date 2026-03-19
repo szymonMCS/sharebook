@@ -266,7 +266,7 @@ class IMessageRepository(ABC):
     async def get_by_id(self, message_id: UUID) -> Optional[Message]:
         pass
     @abstractmethod
-    async def get_by_loan_request(self, loan_request_id: UUID, skip: int = 0, limit: int = 100) -> List[Message]:
+    async def get_by_loan_request(self, loan_request_id: UUID, skip: int = 0, limit: int = 100, include_sender: bool = False) -> List[Message]:
         pass
     @abstractmethod
     async def create(self, loan_request_id: UUID, sender_id: UUID, content: str, message_type: str = "text") -> Message:

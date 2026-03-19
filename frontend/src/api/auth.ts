@@ -43,7 +43,7 @@ export const authApi = {
     return response.json();
   },
 
-  register: (data: { email: string; password: string; first_name: string; last_name: string; location: string; phone?: string }) =>
+  register: (data: { email: string; password: string; first_name: string; last_name: string; location?: string; phone?: string }) =>
     apiClient<ApiResponse<{ user: User }>>('/auth/register', { 
       method: 'POST', 
       body: { ...data, role: 'reader' },

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { BookOpen, Trash2, ChevronLeft, ChevronRight, Search, Plus } from 'lucide-react';
+import { BookOpen, Trash2, ChevronLeft, ChevronRight, Search, Plus, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -35,7 +34,6 @@ import { adminApi, type AdminBook } from '@/api/admin';
 
 export function BooksSection() {
   const [books, setBooks] = useState<AdminBook[]>([]);
-  const [filteredBooks, setFilteredBooks] = useState<AdminBook[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -52,14 +50,23 @@ export function BooksSection() {
     author: '',
     description: ''
   });
+  
+  // Edit dialog state
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [bookToEdit, setBookToEdit] = useState<AdminBook | null>(null);
+  const [editForm, setEditForm] = useState({
+    isbn: '',
+    title: '',
+    author: ''
+  });
 
-  const fetchBooks = async (currentPage: number) => {
+  const fetchBooks = async (currentPage: number, search?: string) => {
     try {
       setLoading(true);
-      const response = await adminApi.getBooks(currentPage);
+      const response = await adminApi.getBooks(currentPage, 20, search);
       if (response.data) {
         setBooks(response.data.data);
-        setFilteredBooks(response.data.data);
         setTotalPages(response.data.total_pages);
       }
     } catch (err) {
@@ -70,24 +77,18 @@ export function BooksSection() {
   };
 
   useEffect(() => {
-    fetchBooks(page);
-  }, [page]);
+    // Debounce search - wait 300ms after user stops typing
+    const timeoutId = setTimeout(() => {
+      setPage(1); // Reset to first page on search
+      fetchBooks(1, searchQuery.trim() || undefined);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredBooks(books);
-    } else {
-      const query = searchQuery.toLowerCase();
-      setFilteredBooks(
-        books.filter(
-          (book) =>
-            book.title.toLowerCase().includes(query) ||
-            book.author.toLowerCase().includes(query) ||
-            book.isbn?.toLowerCase().includes(query)
-        )
-      );
-    }
-  }, [searchQuery, books]);
+    fetchBooks(page, searchQuery.trim() || undefined);
+  }, [page]);
 
   const handleDelete = async () => {
     if (!bookToDelete) return;
@@ -96,7 +97,6 @@ export function BooksSection() {
       setIsDeleting(true);
       await adminApi.deleteBook(bookToDelete.id);
       setBooks((prev) => prev.filter((b) => b.id !== bookToDelete.id));
-      setFilteredBooks((prev) => prev.filter((b) => b.id !== bookToDelete.id));
       setBookToDelete(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Błąd usuwania książki');
@@ -121,27 +121,51 @@ export function BooksSection() {
       });
       setNewBook({ isbn: '', title: '', author: '', description: '' });
       setIsAddDialogOpen(false);
-      fetchBooks(page);
+      fetchBooks(page, searchQuery.trim() || undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Błąd dodawania książki');
     } finally {
       setIsAdding(false);
     }
   };
+  
+  const handleEditClick = (book: AdminBook) => {
+    setBookToEdit(book);
+    setEditForm({
+      isbn: book.isbn || '',
+      title: book.title || '',
+      author: book.author || ''
+    });
+    setIsEditDialogOpen(true);
+  };
+  
+  const handleEditBook = async () => {
+    if (!bookToEdit) return;
+    
+    if (!editForm.isbn.trim()) {
+      setError('ISBN jest wymagany');
+      return;
+    }
+    if (!editForm.title.trim()) {
+      setError('Tytuł jest wymagany');
+      return;
+    }
 
-  const getStatusBadge = (status: AdminBook['status']) => {
-    const config = {
-      available: { label: 'Dostępna', className: 'bg-green-100 text-green-800 border-green-200' },
-      lent: { label: 'Wypożyczona', className: 'bg-amber-100 text-amber-800 border-amber-200' },
-      private: { label: 'Prywatna', className: 'bg-gray-100 text-gray-800 border-gray-200' },
-    };
-
-    const { label, className } = config[status];
-    return (
-      <Badge variant="outline" className={className}>
-        {label}
-      </Badge>
-    );
+    try {
+      setIsEditing(true);
+      await adminApi.updateBookMetadata(bookToEdit.id, {
+        isbn: editForm.isbn,
+        title: editForm.title,
+        author: editForm.author || undefined
+      });
+      setIsEditDialogOpen(false);
+      setBookToEdit(null);
+      fetchBooks(page, searchQuery.trim() || undefined);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Błąd aktualizacji książki');
+    } finally {
+      setIsEditing(false);
+    }
   };
 
   return (
@@ -188,7 +212,7 @@ export function BooksSection() {
                 <div key={i} className="h-12 bg-stone-100 rounded animate-pulse" />
               ))}
             </div>
-          ) : filteredBooks.length === 0 ? (
+          ) : books.length === 0 ? (
             <div className="text-center py-12">
               <BookOpen className="w-12 h-12 text-stone-300 mx-auto mb-4" />
               <h3 className="font-serif font-semibold text-book-brown mb-2">
@@ -213,7 +237,7 @@ export function BooksSection() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredBooks.map((book) => (
+                    {books.map((book) => (
                       <TableRow key={book.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -243,14 +267,24 @@ export function BooksSection() {
                         <TableCell className="text-book-gray">{book.author || '-'}</TableCell>
                         <TableCell className="text-book-gray text-sm">{book.isbn || '-'}</TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => setBookToDelete(book)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => handleEditClick(book)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => setBookToDelete(book)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -363,6 +397,54 @@ export function BooksSection() {
             </Button>
             <Button onClick={handleAddBook} disabled={isAdding}>
               {isAdding ? 'Dodawanie...' : 'Dodaj książkę'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edytuj książkę</DialogTitle>
+            <DialogDescription>
+              Zmień dane książki. ISBN i tytuł są wymagane.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-isbn">ISBN *</Label>
+              <Input
+                id="edit-isbn"
+                placeholder="np. 978-83-0123-456-7"
+                value={editForm.isbn}
+                onChange={(e) => setEditForm({ ...editForm, isbn: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Tytuł *</Label>
+              <Input
+                id="edit-title"
+                placeholder="Tytuł książki"
+                value={editForm.title}
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-author">Autor</Label>
+              <Input
+                id="edit-author"
+                placeholder="Imię i nazwisko autora"
+                value={editForm.author}
+                onChange={(e) => setEditForm({ ...editForm, author: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Anuluj
+            </Button>
+            <Button onClick={handleEditBook} disabled={isEditing}>
+              {isEditing ? 'Zapisywanie...' : 'Zapisz zmiany'}
             </Button>
           </DialogFooter>
         </DialogContent>

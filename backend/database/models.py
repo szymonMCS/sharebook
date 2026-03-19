@@ -129,6 +129,7 @@ class LoanRequest(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     
+    user_book: Mapped["UserBook"] = relationship("UserBook")
     requester: Mapped["User"] = relationship("User", foreign_keys=[requester_id], back_populates="outgoing_requests")
     owner: Mapped["User"] = relationship("User", foreign_keys=[owner_id], back_populates="incoming_requests")
     messages: Mapped[List["Message"]] = relationship("Message", back_populates="loan_request", cascade="all, delete-orphan")

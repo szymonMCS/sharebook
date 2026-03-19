@@ -124,19 +124,16 @@ export function useBookCoverWS(bookId: string): UseBookCoverWSReturn {
 
       ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data) as WebSocketMessage;
-          console.log('[useBookCoverWS] Otrzymano wiadomość:', data);
-
+          const data = JSON.parse(event.data) as Record<string, unknown>;
+          
           if (data.type === 'cover_updated' && data.book_id === bookId) {
-            console.log('[useBookCoverWS] Aktualizacja okładki:', data.cover_url);
-            setLatestCoverUrl(data.cover_url);
+            setLatestCoverUrl(data.cover_url as string);
             setIsDownloading(false);
           }
           
           if (data.type === 'book_enriched' && data.book_id === bookId) {
-            console.log('[useBookCoverWS] Dane książki wzbogacone:', data.book_data);
             setBookEnriched(true);
-            setEnrichedData(data.book_data);
+            setEnrichedData(data.book_data as BookEnrichedMessage['book_data']);
           }
         } catch (err) {
           console.error('[useBookCoverWS] Błąd parsowania wiadomości:', err);

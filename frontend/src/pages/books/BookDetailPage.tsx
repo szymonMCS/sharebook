@@ -49,10 +49,11 @@ export function BookDetailPage() {
   const updateBookStatusMutation = useUpdateBookStatus();
   const deleteBookMutation = useDeleteBook();
   
-  const [book, setBook] = useState<Book | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [book, setBook] = useState<any>(null);
   const [loadingStage, setLoadingStage] = useState<LoadingStage>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [isEnriching, setIsEnriching] = useState(false);
+  const [_isEnriching, setIsEnriching] = useState(false);
 
   const handleEnrichBook = useCallback(async (bookId: string) => {
     setIsEnriching(true);
@@ -201,7 +202,7 @@ export function BookDetailPage() {
     setIsManaging(true);
     try {
       await updateBookStatusMutation.mutateAsync({ id: bookId, status: newStatus });
-      setBook(prev => prev ? { ...prev, status: newStatus as Book['status'] } : null);
+      setBook((prev: any) => prev ? { ...prev, status: newStatus as Book['status'] } : null);
       if (id) {
         try {
           await loadBook(id);

@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Heart, Calendar, MoreVertical, User } from 'lucide-react';
+import { MoreVertical, User } from 'lucide-react';
 import { LazyBookCover } from './LazyBookCover';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,8 +28,8 @@ interface BookCardProps {
 export function BookCard({
   book,
   showActions = true,
-  onBorrow,
-  onReserve,
+  onBorrow: _onBorrow,
+  onReserve: _onReserve,
   onEdit,
   onDelete,
   onClick,
@@ -38,12 +37,10 @@ export function BookCard({
   currentUserId,
 }: BookCardProps) {
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
+  const { user } = useAuth();
   const [isHovered, setIsHovered] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
   
   const statusInfo = statusConfig[book.status];
-  const isAvailable = book.status === 'available';
   const isOwner = currentUserId === book.owner_id || user?.id === book.owner_id;
   const owner = book.owner;
   
@@ -111,19 +108,6 @@ export function BookCard({
               </h3>
               <p className="text-book-gray">{book.author}</p>
             </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsLiked(!isLiked);
-              }}
-              className="p-2 rounded-full hover:bg-stone-100 transition-colors"
-            >
-              <Heart
-                className={`w-5 h-5 transition-colors ${
-                  isLiked ? 'fill-red-500 text-red-500' : 'text-stone-400'
-                }`}
-              />
-            </button>
           </div>
           
           {book.description && (
@@ -134,35 +118,14 @@ export function BookCard({
           
           {owner && (
             <div className="flex items-center gap-2 mt-3 text-sm text-book-muted">
-              <img
-                src={owner.avatar_url}
-                alt={owner.username}
-                className="w-6 h-6 rounded-full"
-              />
-              <span>{owner.username}</span>
+              <div className="w-6 h-6 rounded-full bg-stone-200 flex items-center justify-center text-xs font-medium text-stone-600">
+                {owner.first_name?.[0] || owner.username?.[0] || '?'}
+              </div>
+              <span>{owner.first_name} {owner.last_name}</span>
             </div>
           )}
           
-          {showActions && isAuthenticated && isAvailable && !isOwner && (
-            <div className="flex gap-3 mt-4">
-              <Button
-                size="sm"
-                className="bg-book-gold hover:bg-book-gold-hover text-white"
-                onClick={onBorrow}
-              >
-                <BookOpen className="w-4 h-4 mr-2" />
-                Wypożycz
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onReserve}
-              >
-                <Calendar className="w-4 h-4 mr-2" />
-                Rezerwuj
-              </Button>
-            </div>
-          )}
+          {/* Action buttons removed - user must go to detail page to interact */}
         </div>
       </div>
     );
@@ -193,58 +156,7 @@ export function BookCard({
           }`}
         />
         
-        {/* Heart Button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            setIsLiked(!isLiked);
-          }}
-          className={`absolute top-3 right-3 p-2 rounded-full bg-white/90 backdrop-blur-sm transition-all duration-300 hover:bg-white ${
-            isHovered || isLiked ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
-          }`}
-        >
-          <Heart
-            className={`w-4 h-4 transition-colors ${
-              isLiked ? 'fill-red-500 text-red-500' : 'text-stone-600'
-            }`}
-          />
-        </button>
-        
-        {/* Action Buttons - only for authenticated users */}
-        {showActions && isAuthenticated && (
-          <div 
-            className={`absolute bottom-4 left-4 right-4 flex gap-2 transition-all duration-300 ${
-              isHovered && isAvailable && !isOwner
-                ? 'opacity-100 translate-y-0'
-                : 'opacity-0 translate-y-4'
-            }`}
-          >
-            <Button
-              size="sm"
-              className="flex-1 bg-book-gold hover:bg-book-gold-hover text-white"
-              onClick={(e) => {
-                e.stopPropagation();
-                onBorrow?.();
-              }}
-            >
-              <BookOpen className="w-4 h-4 mr-1" />
-              Wypożycz
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="flex-1 bg-white/90 backdrop-blur-sm border-white/50"
-              onClick={(e) => {
-                e.stopPropagation();
-                onReserve?.();
-              }}
-            >
-              <Calendar className="w-4 h-4 mr-1" />
-              Rezerwuj
-            </Button>
-          </div>
-        )}
+        {/* Quick actions removed - user must go to detail page to interact */}
         
         {/* Owner Menu */}
         {isOwner && showActions && (
@@ -289,12 +201,10 @@ export function BookCard({
         
         {owner && (
           <div className="flex items-center gap-2 mt-3 pt-3 border-t border-stone-100">
-            <img
-              src={owner.avatar_url}
-              alt={owner.username}
-              className="w-6 h-6 rounded-full object-cover"
-            />
-            <span className="text-xs text-book-muted">{owner.username}</span>
+            <div className="w-6 h-6 rounded-full bg-stone-200 flex items-center justify-center text-xs font-medium text-stone-600">
+              {owner.first_name?.[0] || '?'}
+            </div>
+            <span className="text-xs text-book-muted">{owner.first_name} {owner.last_name}</span>
           </div>
         )}
       </div>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Send, Sparkles, Trash2, Bot, RefreshCw, Database } from 'lucide-react';
+import { Send, Sparkles, Trash2, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -25,42 +25,14 @@ export function AIChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, _setIsLoadingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [aiHealth, setAiHealth] = useState<{ status: string; vector_db: { indexed_books?: number; total_chunks?: number } } | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
+  
+  
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Check AI health on mount
-  useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        const health = await aiApi.getHealth();
-        setAiHealth({
-                      status: health.status,
-                      vector_db: health.vector_db
-                    });
-      } catch (e) {
-        console.error('Failed to check AI health:', e);
-      }
-    };
-    checkHealth();
-  }, []);
+  
 
-  const handleSyncRag = async () => {
-    setIsSyncing(true);
-    try {
-      await aiApi.sync();
-      const health = await aiApi.getHealth();
-      setAiHealth({
-                      status: health.status,
-                      vector_db: health.vector_db
-                    });
-    } catch (e) {
-      console.error('Failed to sync RAG:', e);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
+  
 
   // Start with welcome message
   useEffect(() => {
@@ -182,36 +154,7 @@ export function AIChatPage() {
             )}
           </div>
 
-          {/* AI RAG Status */}
-          {aiHealth && (
-            <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-4 border border-violet-200 mb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                    <Database className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-book-brown">Baza wiedzy AI</h3>
-                    <p className="text-xs text-book-muted">
-                      {aiHealth.status === 'healthy' 
-                        ? `${aiHealth.vector_db?.indexed_books ?? aiHealth.vector_db?.total_chunks ?? 0} książek w indeksie`
-                        : 'Ładowanie...'}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSyncRag}
-                  disabled={isSyncing}
-                  className="border-violet-300 text-violet-700 hover:bg-violet-100"
-                >
-                  <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-                  {isSyncing ? 'Synchronizacja...' : 'Synchronizuj'}
-                </Button>
-              </div>
-            </div>
-          )}
+          
 
           {/* Chat Container */}
           <div className="bg-white rounded-2xl shadow-xl border border-stone-200/60 overflow-hidden">
