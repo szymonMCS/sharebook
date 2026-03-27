@@ -80,12 +80,5 @@ class BookSearchAgent:
         except Exception as e:
             self._logger.debug(f"OpenLibrary error: {e}")
         
-        try:
-            result = await self.search_executor.get_cover_from_google(isbn)
-            if result.url:
-                return result.url
-        except Exception as e:
-            self._logger.debug(f"Google Books error: {e}")
-        
         self._logger.warning("[AI Search] No cover found")
         return None

@@ -41,10 +41,11 @@ export function useBorrowedBooks(page: number = 1, perPage: number = 20) {
   return useQuery({
     queryKey: [...userBookKeys.borrowed(), page, perPage],
     queryFn: async () => {
-      const response = await loansApi.getBorrowedBooks(undefined, page, perPage);
+      const response = await loansApi.getBorrowedBooks('active', page, perPage);
       return response.loans || [];
     },
-    staleTime: STALE_TIME,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 }
 
@@ -52,10 +53,11 @@ export function useLentBooks(page: number = 1, perPage: number = 20) {
   return useQuery({
     queryKey: [...userBookKeys.lent(), page, perPage],
     queryFn: async () => {
-      const response = await loansApi.getLentBooks(undefined, page, perPage);
+      const response = await loansApi.getLentBooks('active', page, perPage);
       return response.loans || [];
     },
-    staleTime: STALE_TIME,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 }
 
@@ -196,11 +198,29 @@ export function useReturnBook() {
 
   return useMutation({
     mutationFn: (loanId: string) => loansApi.returnBook(loanId),
-    onSuccess: () => {
-      // Odśwież wypożyczone książki, pożyczone książki i moje książki
-      queryClient.invalidateQueries({ queryKey: userBookKeys.borrowed() });
-      queryClient.invalidateQueries({ queryKey: userBookKeys.lent() });
-      queryClient.invalidateQueries({ queryKey: userBookKeys.myBooks() });
+    onSuccess: async () => {
+      console.log('[useReturnBook] onSuccess - removing queries from cache');
+      
+      // Usuń wszystkie zapytania o wypożyczone książki z cache
+      queryClient.removeQueries({ queryKey: userBookKeys.borrowed() });
+      queryClient.removeQueries({ queryKey: userBookKeys.lent() });
+      
+      console.log('[useReturnBook] Refetching borrowed and lent books...');
+      
+      // Odśwież dane
+      await queryClient.refetchQueries({ 
+        queryKey: userBookKeys.borrowed(),
+        exact: false 
+      });
+      await queryClient.refetchQueries({ 
+        queryKey: userBookKeys.lent(),
+        exact: false 
+      });
+      
+      console.log('[useReturnBook] Refetch completed');
+    },
+    onError: (error: Error) => {
+      console.error('[useReturnBook] Error:', error);
     },
   });
 }

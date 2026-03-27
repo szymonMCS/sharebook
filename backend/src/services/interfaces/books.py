@@ -94,7 +94,6 @@ class IUserBookService(ABC):
 
 
 class IBookMetadataProvider(ABC):
-    """Interface for external book metadata providers (Google Books, etc)."""
 
     @abstractmethod
     async def fetch_by_isbn(self, isbn: str) -> Optional["BookMetadata"]:

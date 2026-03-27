@@ -87,6 +87,11 @@ class LoanService(ILoanService):
         if loan.status == "returned":
             return LoanResponse.model_validate(loan)
         updated_loan = await self._loan_repo.mark_returned(loan_id)
+        
+        if self._user_book_repo:
+            await self._user_book_repo.update_status(loan.user_book_id, "available")
+            logger.info(f"Book {loan.user_book_id} status updated to available")
+        
         logger.info(f"Returned loan: {loan_id}")
         return LoanResponse.model_validate(updated_loan)
 

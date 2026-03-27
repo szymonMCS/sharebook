@@ -24,10 +24,6 @@ class Settings(BaseSettings):
     AI_MAX_TOKENS: int = Field(default=500, ge=100, le=2000)
     AI_MAX_CONTEXT_CHUNKS: int = Field(default=5, ge=1, le=20)
     AI_MAX_HISTORY_MESSAGES: int = Field(default=10, ge=1, le=50)
-    # Google Books API
-    GOOGLE_BOOKS_API_KEY: str = Field(default="")
-    GOOGLE_BOOKS_API_URL: str = Field(default="https://www.googleapis.com/books/v1/volumes")
-    GOOGLE_BOOKS_TIMEOUT: int = Field(default=10, ge=1, le=60)
     # Cover System
     COVERS_PATH: str = Field(default="database/covers")
     MAX_COVER_SIZE_MB: int = Field(default=5, ge=1, le=50)

@@ -3,6 +3,7 @@ import { BookOpen, Calendar, User, ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -39,19 +40,16 @@ function isOverdue(dateString: string): boolean {
 
 interface BorrowedBookCardProps {
   book: BorrowedBook;
+  onReturn: (bookId: string) => Promise<void>;
+  isReturning: boolean;
 }
 
-const BorrowedBookCard = memo(function BorrowedBookCard({ book }: BorrowedBookCardProps) {
-  const returnBook = useReturnBook();
+const BorrowedBookCard = memo(function BorrowedBookCard({ book, onReturn, isReturning }: BorrowedBookCardProps) {
   const overdue = isOverdue(book.due_date || '');
 
   const handleReturn = useCallback(async () => {
-    try {
-      await returnBook.mutateAsync(book.id);
-    } catch {
-      // Error handled by hook
-    }
-  }, [returnBook, book.id]);
+    await onReturn(book.id);
+  }, [onReturn, book.id]);
 
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow">
@@ -103,7 +101,7 @@ const BorrowedBookCard = memo(function BorrowedBookCard({ book }: BorrowedBookCa
                 <Button 
                   variant={overdue ? 'destructive' : 'outline'}
                   className={overdue ? '' : 'border-book-gold text-book-gold hover:bg-book-gold/10'}
-                  disabled={returnBook.isPending}
+                  disabled={isReturning}
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Zwróć książkę
@@ -113,7 +111,7 @@ const BorrowedBookCard = memo(function BorrowedBookCard({ book }: BorrowedBookCa
                 <AlertDialogHeader>
                   <AlertDialogTitle>Zwrócić książkę?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Czy na pewno chcesz zwrócić „{book.book?.title}"? 
+                    Czy na pewno chcesz zwrócić "{book.book?.title}"? 
                     Właściciel zostanie powiadomiony o zwrocie.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -122,8 +120,9 @@ const BorrowedBookCard = memo(function BorrowedBookCard({ book }: BorrowedBookCa
                   <AlertDialogAction 
                     onClick={handleReturn}
                     className="bg-book-gold hover:bg-book-gold-hover"
+                    disabled={isReturning}
                   >
-                    {returnBook.isPending ? (
+                    {isReturning ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       'Zwróć książkę'
@@ -140,7 +139,8 @@ const BorrowedBookCard = memo(function BorrowedBookCard({ book }: BorrowedBookCa
 });
 
 export function BorrowedBooksSection() {
-  const { data: borrowedBooks = [], isLoading, error } = useBorrowedBooks();
+  const { data: borrowedBooks = [], isLoading, error, refetch } = useBorrowedBooks();
+  const returnBook = useReturnBook();
 
   // Sort by due date (overdue first, then by date)
   const sortedBooks = useMemo(() => {
@@ -158,6 +158,23 @@ export function BorrowedBooksSection() {
   const overdueCount = useMemo(() => {
     return borrowedBooks.filter(b => isOverdue(b.due_date || '')).length;
   }, [borrowedBooks]);
+
+  const handleReturn = useCallback(async (bookId: string) => {
+    try {
+      console.log('[BorrowedBooks] Returning book:', bookId);
+      await returnBook.mutateAsync(bookId);
+      console.log('[BorrowedBooks] Return mutation completed');
+      toast.success('Książka została zwrócona pomyślnie');
+      
+      // Wymuś odświeżenie listy
+      console.log('[BorrowedBooks] Refetching list...');
+      await refetch();
+      console.log('[BorrowedBooks] Refetch completed');
+    } catch (error) {
+      console.error('[BorrowedBooks] Return error:', error);
+      toast.error(error instanceof Error ? error.message : 'Nie udało się zwrócić książki');
+    }
+  }, [returnBook, refetch]);
 
   return (
     <div className="space-y-6">
@@ -213,7 +230,12 @@ export function BorrowedBooksSection() {
       ) : (
         <div className="space-y-4">
           {sortedBooks.map((book) => (
-            <BorrowedBookCard key={book.id} book={book} />
+            <BorrowedBookCard 
+              key={book.id} 
+              book={book} 
+              onReturn={handleReturn}
+              isReturning={returnBook.isPending}
+            />
           ))}
         </div>
       )}
