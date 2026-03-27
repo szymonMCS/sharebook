@@ -190,10 +190,10 @@ class BookRepository(IBookRepository):
         since = datetime.now(timezone.utc) - timedelta(days=days)
         from database.models import UserBook
         stmt = (
-            select(func.date(UserBook.created_at).label("date"), func.count().label("count"))
-            .where(UserBook.created_at >= since)
-            .group_by(func.date(UserBook.created_at))
-            .order_by(func.date(UserBook.created_at))
+            select(func.date(UserBook.added_at).label("date"), func.count().label("count"))
+            .where(UserBook.added_at >= since)
+            .group_by(func.date(UserBook.added_at))
+            .order_by(func.date(UserBook.added_at))
         )
         result = await self._db.execute(stmt)
         return [{"date": str(row.date), "count": row.count} for row in result.all()]

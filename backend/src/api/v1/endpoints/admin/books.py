@@ -55,68 +55,15 @@ async def get_books(
         "message": "Books retrieved"
     }
 
-@router.get("/{book_id}", response_model=dict)
-async def get_book_details(book_id: UUID, current_user: User = Depends(get_current_active_admin), book_service: BookAdminService = Depends(get_book_admin_service)):
-    result = await book_service.get_book_details(book_id)
-    return {
-        "success": True,
-        "data": result,
-        "message": "Book details retrieved"
-    }
+class AddUserBookRequest(BaseModel):
+    user_id: UUID = Field(..., description="User ID to add book to")
+    book_id: UUID = Field(..., description="Book ID to add")
+    condition: str = Field(default="good", description="Book condition")
+    is_lendable: bool = Field(default=True, description="Whether book is lendable")
 
-@router.patch("/{book_id}", response_model=dict)
-async def update_book_metadata(
-    book_id: UUID,
-    metadata: BookMetadataUpdate,
-    current_user: User = Depends(get_current_active_admin),
-    book_service: BookAdminService = Depends(get_book_admin_service)
-):
-    result = await book_service.update_book_metadata(book_id=book_id, metadata=metadata.model_dump(exclude_unset=True))
-    return {
-        "success": True,
-        "data": result,
-        "message": "Book metadata updated"
-    }
-
-@router.post("/merge", response_model=dict)
-async def merge_books(
-    source_id: UUID,
-    target_id: UUID,
-    current_user: User = Depends(get_current_active_admin),
-    book_service: BookAdminService = Depends(get_book_admin_service)
-):
-    result = await book_service.merge_books(source_book_id=source_id, target_book_id=target_id)
-    return {
-        "success": True,
-        "data": result,
-        "message": f"Books merged. Moved {result['moved_copies']} copies."
-    }
-
-@router.delete("/{book_id}", response_model=dict)
-async def delete_book(
-    book_id: UUID,
-    force: bool = Query(False, description="Force delete even with active loans"),
-    current_user: User = Depends(get_current_active_admin),
-    book_service: BookAdminService = Depends(get_book_admin_service)
-):
-    await book_service.delete_book(book_id, force=force)
-    return {
-        "success": True,
-        "message": "Książka usunięta"
-    }
-
-@router.post("", response_model=dict)
-async def create_book(
-    book_data: BookCreate,
-    current_user: User = Depends(get_current_active_admin),
-    book_service: BookAdminService = Depends(get_book_admin_service)
-):
-    book = await book_service.create_book(book_data.model_dump())
-    return {
-        "success": True,
-        "data": book,
-        "message": "Książka dodana"
-    }
+class UpdateUserBookRequest(BaseModel):
+    status: str = Field(..., description="New status: available, reserved, borrowed, unavailable")
+    is_lendable: Optional[bool] = Field(None, description="Update lendable status")
 
 @router.get("/user-books", response_model=dict)
 async def list_user_books(
@@ -144,13 +91,6 @@ async def list_user_books(
         },
         "message": "User books retrieved"
     }
-
-
-class AddUserBookRequest(BaseModel):
-    user_id: UUID = Field(..., description="User ID to add book to")
-    book_id: UUID = Field(..., description="Book ID to add")
-    condition: str = Field(default="good", description="Book condition")
-    is_lendable: bool = Field(default=True, description="Whether book is lendable")
 
 @router.post("/user-books", response_model=dict)
 async def add_book_to_user(
@@ -184,11 +124,6 @@ async def remove_book_from_user(
         "message": "Książka usunięta z biblioteki użytkownika"
     }
 
-
-class UpdateUserBookRequest(BaseModel):
-    status: str = Field(..., description="New status: available, reserved, borrowed, unavailable")
-    is_lendable: Optional[bool] = Field(None, description="Update lendable status")
-
 @router.patch("/user-books/{user_book_id}", response_model=dict)
 async def update_user_book_status(
     user_book_id: UUID,
@@ -205,4 +140,67 @@ async def update_user_book_status(
         "success": True,
         "data": result,
         "message": "Status książki zaktualizowany"
+    }
+
+@router.post("/merge", response_model=dict)
+async def merge_books(
+    source_id: UUID,
+    target_id: UUID,
+    current_user: User = Depends(get_current_active_admin),
+    book_service: BookAdminService = Depends(get_book_admin_service)
+):
+    result = await book_service.merge_books(source_book_id=source_id, target_book_id=target_id)
+    return {
+        "success": True,
+        "data": result,
+        "message": f"Books merged. Moved {result['moved_copies']} copies."
+    }
+
+@router.post("", response_model=dict)
+async def create_book(
+    book_data: BookCreate,
+    current_user: User = Depends(get_current_active_admin),
+    book_service: BookAdminService = Depends(get_book_admin_service)
+):
+    book = await book_service.create_book(book_data.model_dump())
+    return {
+        "success": True,
+        "data": book,
+        "message": "Książka dodana"
+    }
+
+@router.get("/{book_id}", response_model=dict)
+async def get_book_details(book_id: UUID, current_user: User = Depends(get_current_active_admin), book_service: BookAdminService = Depends(get_book_admin_service)):
+    result = await book_service.get_book_details(book_id)
+    return {
+        "success": True,
+        "data": result,
+        "message": "Book details retrieved"
+    }
+
+@router.patch("/{book_id}", response_model=dict)
+async def update_book_metadata(
+    book_id: UUID,
+    metadata: BookMetadataUpdate,
+    current_user: User = Depends(get_current_active_admin),
+    book_service: BookAdminService = Depends(get_book_admin_service)
+):
+    result = await book_service.update_book_metadata(book_id=book_id, metadata=metadata.model_dump(exclude_unset=True))
+    return {
+        "success": True,
+        "data": result,
+        "message": "Book metadata updated"
+    }
+
+@router.delete("/{book_id}", response_model=dict)
+async def delete_book(
+    book_id: UUID,
+    force: bool = Query(False, description="Force delete even with active loans"),
+    current_user: User = Depends(get_current_active_admin),
+    book_service: BookAdminService = Depends(get_book_admin_service)
+):
+    await book_service.delete_book(book_id, force=force)
+    return {
+        "success": True,
+        "message": "Książka usunięta"
     }

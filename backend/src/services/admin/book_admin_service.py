@@ -260,7 +260,7 @@ class BookAdminService(IBookAdminService):
         total = total_result.scalar() or 0
         
         # Get paginated results
-        query = query.order_by(UserBook.created_at.desc()).offset(skip).limit(per_page)
+        query = query.order_by(UserBook.added_at.desc()).offset(skip).limit(per_page)
         result = await self._db.execute(query)
         items = result.all()
         
@@ -276,7 +276,7 @@ class BookAdminService(IBookAdminService):
                 "book_title": book.title,
                 "book_author": book.author,
                 "book_isbn": book.isbn,
-                "book_cover_url": f"/covers/{book.isbn}.jpg" if book.isbn else None,
+                "book_cover_url": book.cover_url,
                 "status": user_book.status,
                 "condition": user_book.condition,
                 "is_lendable": user_book.is_lendable,
