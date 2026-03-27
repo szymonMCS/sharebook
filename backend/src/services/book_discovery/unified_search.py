@@ -5,6 +5,7 @@ import traceback
 from dataclasses import dataclass
 from typing import Any, Optional
 from src.config import settings
+from src.services.interfaces.book_discovery import IBookDiscoveryService
 from .agent import BookSearchAgent
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ class BookSearchResult:
     error: str | None = None
 
 
-class UnifiedBookSearch:
+class UnifiedBookSearch(IBookDiscoveryService):
     def __init__(self, openai_api_key: Optional[str] = None):
         self._api_key = openai_api_key or settings.OPENAI_API_KEY
         self._agent: Optional[BookSearchAgent] = None

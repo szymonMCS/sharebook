@@ -13,6 +13,9 @@ class LoanRepository(BaseRepository[Loan], ILoanRepository):
     def __init__(self, db: AsyncSession):
         super().__init__(Loan, db)
     
+    async def delete(self, loan_id: uuid.UUID) -> bool:  # type: ignore[override]
+        return await super().delete(loan_id)
+    
     async def get_by_id(self, loan_id: uuid.UUID) -> Optional[Loan]:
         return await self.get(loan_id)
     
@@ -88,7 +91,8 @@ class LoanRepository(BaseRepository[Loan], ILoanRepository):
             select(func.count())
             .where(and_(Loan.user_book_id == user_book_id, Loan.status == "active"))
         )
-        return result.scalar() > 0
+        count = result.scalar()
+        return count > 0 if count is not None else False
     
     async def count_active_for_borrower(self, borrower_id: uuid.UUID) -> int:
         return await self.count_active_loans_for_borrower(borrower_id)
@@ -98,16 +102,16 @@ class LoanRepository(BaseRepository[Loan], ILoanRepository):
             select(func.count())
             .where(and_(Loan.borrower_id == borrower_id, Loan.status == "active"))
         )
-        return result.scalar()
+        return result.scalar() or 0
     
     async def count_active_loans_for_lender(self, lender_id: uuid.UUID,) -> int:
         result = await self._db.execute(
             select(func.count())
             .where(and_(Loan.lender_id == lender_id, Loan.status == "active"))
         )
-        return result.scalar()
+        return result.scalar() or 0
     
-    async def create(self, user_book_id: uuid.UUID, borrower_id: uuid.UUID, lender_id: uuid.UUID, loan_duration_days: int = 14,) -> Loan:
+    async def create(self, user_book_id: uuid.UUID, borrower_id: uuid.UUID, lender_id: uuid.UUID, loan_duration_days: int = 14,) -> Loan:  # type: ignore[override]
         now = datetime.now(timezone.utc)
         due_date = now + timedelta(days=loan_duration_days)
         

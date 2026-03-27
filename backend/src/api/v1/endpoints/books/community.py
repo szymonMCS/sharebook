@@ -40,7 +40,6 @@ async def get_community_books(
         author=filters.author
     )
     
-    # Log details about returned books
     for book in books:
         logger.info(f"[DEBUG] Book returned: id={book.id}, title={book.title[:30] if book.title else 'N/A'}, owner_id={book.owner_id}, status={book.status}")
     

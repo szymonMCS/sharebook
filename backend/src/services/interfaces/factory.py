@@ -2,96 +2,91 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from src.services.admin.interfaces import IAdminDashboardService, IUserAdminService, IBookAdminService
-
-
-IUserRepository = "IUserRepository"
-IBookRepository = "IBookRepository"
-IUserBookRepository = "IUserBookRepository"
-ILoanRepository = "ILoanRepository"
-ILoanRequestRepository = "ILoanRequestRepository"
+    from src.services.interfaces.auth import IAuthService, ITokenService
+    from src.services.interfaces.loans import ILoanService, ILoanRequestService
+    from src.services.interfaces.messages import IMessageService
+    from src.services.interfaces.ai import IVectorService, IAIService, IMarkdownGeneratorService
+    from src.services.interfaces.cover import ICoverService
+    from src.services.interfaces.book_discovery import IBookDiscoveryService
+    from src.services.books import BookService, UserBookService
 
 
 class IRepositoryFactory(ABC):
     @abstractmethod
-    def create_user_repository(self) -> IUserRepository:
+    def create_user_repository(self):
         pass
     @abstractmethod
-    def create_book_repository(self) -> IBookRepository:
+    def create_book_repository(self):
         pass
     @abstractmethod
-    def create_user_book_repository(self) -> IUserBookRepository:
+    def create_user_book_repository(self):
         pass
     @abstractmethod
-    def create_loan_repository(self) -> ILoanRepository:
+    def create_loan_repository(self):
         pass
     @abstractmethod
-    def create_loan_request_repository(self) -> ILoanRequestRepository:
+    def create_loan_request_repository(self):
+        pass
+    @abstractmethod
+    def create_message_repository(self):
         pass
 
 
 class IServiceFactory(ABC):
     @abstractmethod
-    def create_auth_service(self):
+    def create_auth_service(self) -> "IAuthService":
         pass
     @abstractmethod
-    def create_user_service(self):
+    def create_user_service(self) -> "IAuthService":
         pass
     @abstractmethod
-    def create_registration_service(self):
+    def create_registration_service(self) -> "IAuthService":
         pass
     @abstractmethod
-    def create_token_service(self):
+    def create_token_service(self) -> "ITokenService":
         pass
     @abstractmethod
-    def create_password_service(self):
+    def create_password_service(self) -> "IAuthService":
         pass
     @abstractmethod
-    def create_book_catalog_service(self):
+    def create_book_catalog_service(self) -> "BookService":
         pass
     @abstractmethod
-    def create_library_management_service(self):
+    def create_library_management_service(self) -> "UserBookService":
         pass
     @abstractmethod
-    def create_loan_service(self):
+    def create_loan_service(self) -> "ILoanService":
         pass
     @abstractmethod
-    def create_loan_request_service(self):
+    def create_loan_request_service(self) -> "ILoanRequestService":
         pass
     @abstractmethod
-    def create_message_service(self):
+    def create_message_service(self) -> "IMessageService":
         pass
     @abstractmethod
-    def create_admin_dashboard_service(self) -> "IAdminDashboardService":
+    def create_admin_dashboard_service(self):
         pass
     @abstractmethod
-    def create_user_admin_service(self) -> "IUserAdminService":
+    def create_user_admin_service(self):
         pass
     @abstractmethod
-    def create_book_admin_service(self) -> "IBookAdminService":
-        pass
-    # Book Discovery and AI services
-    @abstractmethod
-    def create_book_discovery_service(self):
-        """Create book discovery service for AI-powered book search."""
+    def create_book_admin_service(self):
         pass
     @abstractmethod
-    def create_vector_service(self):
-        """Create vector service for embeddings and similarity search."""
+    def create_book_discovery_service(self) -> "IBookDiscoveryService":
         pass
     @abstractmethod
-    def create_ai_service(self):
-        """Create AI service for RAG-based recommendations."""
+    def create_vector_service(self) -> "IVectorService":
         pass
     @abstractmethod
-    def create_markdown_generator_service(self):
-        """Create markdown generator service for knowledge base."""
+    def create_ai_service(self) -> "IAIService":
         pass
     @abstractmethod
-    def create_cover_service(self):
-        """Create cover service for fetching book covers."""
+    def create_markdown_generator_service(self) -> "IMarkdownGeneratorService":
         pass
     @abstractmethod
-    def create_user_book_service(self):
-        """Create user book service for library management."""
+    def create_cover_service(self) -> "ICoverService":
+        pass
+    @abstractmethod
+    def create_user_book_service(self) -> "UserBookService":
         pass

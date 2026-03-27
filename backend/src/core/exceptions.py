@@ -147,7 +147,7 @@ class SelfModificationException(ShareBookException):
 class InvalidRoleException(ShareBookException):
     status_code = 400
 
-    def __init__(self, role: str, allowed_roles: list[str] = None):
+    def __init__(self, role: str, allowed_roles: list[str] | None = None):
         allowed = allowed_roles or ["reader", "admin"]
         super().__init__(
             message=f"Invalid role '{role}'. Use: {', '.join(allowed)}",

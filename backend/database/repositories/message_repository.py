@@ -88,11 +88,11 @@ class MessageRepository(IMessageRepository):
                 ((LoanRequest.owner_id == user_id) | (LoanRequest.requester_id == user_id))
             )
         )
-        return result.scalar()
+        return result.scalar() or 0
     
     async def count_messages_for_request(self, loan_request_id: uuid.UUID) -> int:
         result = await self._db.execute(select(func.count()).where(Message.loan_request_id == loan_request_id))
-        return result.scalar()
+        return result.scalar() or 0
     
     async def mark_all_as_read(self, loan_request_id: uuid.UUID, user_id: uuid.UUID) -> int:
         return await self.mark_all_as_read_for_request(loan_request_id, user_id)

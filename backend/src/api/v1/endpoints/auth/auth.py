@@ -61,7 +61,7 @@ async def login(
 @router.post("/logout", status_code=HTTP_204_NO_CONTENT)
 async def logout(response: Response, request: Request, current_user: User = Depends(verify_csrf_protection), refresh_token: str = Cookie(None, alias=REFRESH_TOKEN_COOKIE)) -> None:
     if refresh_token:
-        revoke_token(refresh_token)
+        await revoke_token(refresh_token)
     cookie_service = CookieService()
     cookie_service.clear_auth_cookies(response)
     return None

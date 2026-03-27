@@ -14,7 +14,7 @@ class BaseRepository(IRepository[ModelType]):
         self._db = db
     
     async def get(self, id: UUID) -> Optional[ModelType]:
-        result = await self._db.execute(select(self._model).where(self._model.id == id))
+        result = await self._db.execute(select(self._model).where(self._model.id == id))  # type: ignore
         return result.scalar_one_or_none()
     
     async def get_multi(self, skip: int = 0, limit: int = 100) -> List[ModelType]:
@@ -44,8 +44,9 @@ class BaseRepository(IRepository[ModelType]):
         return True
     
     async def exists(self, id: UUID) -> bool:
-        result = await self._db.execute(select(func.count()).where(self._model.id == id))
-        return result.scalar() > 0
+        result = await self._db.execute(select(func.count()).where(self._model.id == id))  # type: ignore
+        count = result.scalar()
+        return count > 0 if count is not None else False
 
 
 __all__ = ["BaseRepository", "ModelType"]

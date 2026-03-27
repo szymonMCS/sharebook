@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from openai import AsyncOpenAI
 from tenacity import retry, wait_exponential, stop_after_attempt
 from src.config import settings
-from src.services.ai.vector_service import VectorService
+from src.services.interfaces.ai import IAIService, IVectorService
 from src.core.exceptions import ShareBookException
 
 
@@ -29,7 +29,7 @@ class AIServiceException(ShareBookException):
         super().__init__(message=message, code="AI_SERVICE_ERROR")
 
 
-class AIService:
+class AIService(IAIService):
     SYSTEM_PROMPT = """Jesteś kompetentnym i przyjaznym bibliotekarzem w systemie ShareBook.
     Twoim zadaniem jest pomagać użytkownikom znaleźć odpowiednie książki i odpowiadać na pytania o dostępne pozycje.
     
@@ -42,7 +42,7 @@ class AIService:
     Nie wymyślaj informacji o książkach, których nie ma w kontekście.
     """
     
-    def __init__(self, vector_service: VectorService):
+    def __init__(self, vector_service: IVectorService):
         self._vector_service = vector_service
         self._client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
         self._model = settings.OPENAI_CHAT_MODEL
