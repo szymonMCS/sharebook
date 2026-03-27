@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +14,10 @@ from src.services.cover import get_cover_service
 from src.config import settings
 from src.core.exceptions import ShareBookException
 from src.core.response import APIResponse
+
+# Ścieżka do okładek - względna do tego pliku (src/main.py)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+COVERS_DIR = os.path.join(BASE_DIR, settings.COVERS_PATH)
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +79,7 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix="/api/v1")
-app.mount("/covers", StaticFiles(directory=settings.COVERS_PATH), name="covers")
+app.mount("/covers", StaticFiles(directory=COVERS_DIR), name="covers")
 
 @app.exception_handler(ShareBookException)
 async def sharebook_exception_handler(request: Request, exc: ShareBookException):

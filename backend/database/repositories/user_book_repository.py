@@ -25,7 +25,7 @@ class UserBookRepository(BaseRepository[UserBook], IUserBookRepository):
         query = select(UserBook).where(UserBook.user_id == user_id)
         if status:
             query = query.where(UserBook.status == status)
-        query = query.order_by(UserBook.created_at.desc())
+        query = query.order_by(UserBook.added_at.desc())
         result = await self._db.execute(query)
         return list(result.scalars().all())
     

@@ -70,10 +70,6 @@ export const adminApi = {
     return apiClient<ApiResponse<PaginatedResponse<AdminUser>>>(url);
   },
 
-  // Get user details - GET /admin/users/{user_id}
-  getUserDetails: (id: string) =>
-    apiClient<ApiResponse<AdminUser>>(`/admin/users/${id}`),
-
   // Update user role - PATCH /admin/users/{user_id}/role
   updateUserRole: (id: string, role: 'admin' | 'reader') =>
     apiClient<ApiResponse<{ id: string; role: string }>>(`/admin/users/${id}/role`, { 
@@ -85,18 +81,6 @@ export const adminApi = {
   resetUserPassword: (id: string) =>
     apiClient<ApiResponse<ResetPasswordResponse>>(`/admin/users/${id}/reset-password`, { 
       method: 'POST' 
-    }),
-
-  // Deactivate user - POST /admin/users/{user_id}/deactivate
-  deactivateUser: (id: string) =>
-    apiClient<ApiResponse<{ id: string; is_active: boolean }>>(`/admin/users/${id}/deactivate`, {
-      method: 'POST'
-    }),
-
-  // Activate user - POST /admin/users/{user_id}/activate
-  activateUser: (id: string) =>
-    apiClient<ApiResponse<{ id: string; is_active: boolean }>>(`/admin/users/${id}/activate`, {
-      method: 'POST'
     }),
 
   // Delete user - DELETE /admin/users/{user_id}
@@ -114,22 +98,11 @@ export const adminApi = {
     return apiClient<ApiResponse<PaginatedResponse<AdminBook>>>(url);
   },
 
-  // Get book details - GET /admin/books/{book_id}
-  getBookDetails: (id: string) =>
-    apiClient<ApiResponse<AdminBook>>(`/admin/books/${id}`),
-
   // Update book metadata - PATCH /admin/books/{book_id}
   updateBookMetadata: (id: string, metadata: Partial<AdminBook>) =>
     apiClient<ApiResponse<AdminBook>>(`/admin/books/${id}`, {
       method: 'PATCH',
       body: metadata
-    }),
-
-  // Merge books - POST /admin/books/merge
-  mergeBooks: (sourceId: string, targetId: string) =>
-    apiClient<ApiResponse<{ moved_copies: number }>>('/admin/books/merge', {
-      method: 'POST',
-      body: { source_id: sourceId, target_id: targetId }
     }),
 
   // Delete book - DELETE /admin/books/{book_id}
