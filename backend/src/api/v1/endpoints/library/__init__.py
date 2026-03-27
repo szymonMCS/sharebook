@@ -1,8 +1,6 @@
-from fastapi import APIRouter
-from src.api.v1.endpoints.library.routes import router as library_router
-from src.api.v1.endpoints.library import browse, management
+# Import browse to register GET endpoints on the router
+from . import browse
+from .routes import router as library_browse_router
+from .management import management_router as library_management_router
 
-router = APIRouter()
-
-router.include_router(library_router, prefix="/my-books", tags=["library"])
-router.include_router(management.management_router, prefix="/my-books", tags=["library"])
+__all__ = ["library_browse_router", "library_management_router"]

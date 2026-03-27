@@ -1,8 +1,5 @@
-from fastapi import APIRouter
-from src.api.v1.endpoints.admin import dashboard, users, books
+from .dashboard import router as admin_dashboard_router
+from .users import router as admin_users_router
+from .books import router as admin_books_router
 
-router = APIRouter()
-
-router.include_router(dashboard.router, prefix="/dashboard", tags=["admin"])
-router.include_router(users.router, prefix="/users", tags=["admin"])
-router.include_router(books.router, prefix="/books", tags=["admin"])
+__all__ = ["admin_dashboard_router", "admin_users_router", "admin_books_router"]
