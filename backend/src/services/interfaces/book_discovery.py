@@ -91,11 +91,6 @@ class ISearchExecutor(ABC):
         pass
     
     @abstractmethod
-    async def get_cover_from_google(self, isbn: str) -> Any:
-        """Fetch cover URL from Google Books."""
-        pass
-    
-    @abstractmethod
     async def find_cover(self, isbn: str) -> Any:
         """Find cover from any available source."""
         pass

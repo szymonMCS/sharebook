@@ -17,7 +17,7 @@ from database.repositories.loan_repository import LoanRepository
 from database.repositories.loan_request_repository import LoanRequestRepository
 from database.repositories.message_repository import MessageRepository
 from src.services.auth import AuthService, CookieService, TokenService
-from src.services.books import BookService, GoogleBooksService
+from src.services.books import BookService
 from src.services.loans import LoanService, LoanRequestService
 from src.services.messages import MessageService
 from src.services.admin import AdminDashboardService, UserAdminService, BookAdminService
@@ -129,5 +129,3 @@ class ServiceFactory(IServiceFactory):
         return self.create_book_service()
     def create_library_management_service(self):
         return self.create_user_book_service()
-    def create_book_import_service(self):
-        return GoogleBooksService()

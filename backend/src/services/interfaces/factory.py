@@ -53,9 +53,6 @@ class IServiceFactory(ABC):
     def create_library_management_service(self):
         pass
     @abstractmethod
-    def create_book_import_service(self):
-        pass
-    @abstractmethod
     def create_loan_service(self):
         pass
     @abstractmethod
