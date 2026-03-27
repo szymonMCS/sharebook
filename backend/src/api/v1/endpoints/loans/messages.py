@@ -43,7 +43,7 @@ async def mark_message_read(
     message_service: IMessageService = Depends(get_message_service),
     current_user: User = Depends(verify_csrf_protection)
 ):
-    result = await message_service.mark_message_as_read(
+    result = await message_service.mark_messages_as_read(
         message_id=message_id,
         user_id=current_user.id
     )

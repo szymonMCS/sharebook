@@ -7,13 +7,14 @@ from sqlalchemy import select, delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from tenacity import retry, wait_exponential, stop_after_attempt
 from src.config import settings
+from src.services.interfaces.ai import IVectorService
 from database.models import BookChunk, Book
 
 wait = wait_exponential(multiplier=1, min=1, max=10)
 stop = stop_after_attempt(3)
 
 
-class VectorService:
+class VectorService(IVectorService):
     def __init__(self, vector_db: AsyncSession):
         self._db = vector_db
         self._client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)

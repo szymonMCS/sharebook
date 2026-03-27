@@ -5,9 +5,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.models import Book
 from src.config import settings
+from src.services.interfaces.ai import IMarkdownGeneratorService
 
 
-class MarkdownGeneratorService:
+class MarkdownGeneratorService(IMarkdownGeneratorService):
     def __init__(self, db_session: AsyncSession):
         self._db = db_session
     

@@ -8,12 +8,15 @@ from database.interfaces import IUserBookRepository
 from database.models import UserBook, Book, Loan
 
 if TYPE_CHECKING:
-    from database.models import Book
+    from database.models import Book, User
 
 
 class UserBookRepository(BaseRepository[UserBook], IUserBookRepository):
     def __init__(self, db: AsyncSession):
         super().__init__(UserBook, db)
+    
+    async def delete(self, user_book_id: UUID) -> bool:  # type: ignore[override]
+        return await super().delete(user_book_id)
     
     async def get_by_id(self, user_book_id: UUID) -> Optional[UserBook]:
         return await self.get(user_book_id)
@@ -58,7 +61,8 @@ class UserBookRepository(BaseRepository[UserBook], IUserBookRepository):
             query = query.where(UserBook.status == status)
         query = query.order_by(Book.title)
         result = await self._db.execute(query)
-        return list(result.all())
+        rows = result.all()
+        return [(row[0], row[1]) for row in rows]
     
     async def toggle_lendable(self, id: UUID) -> Optional[UserBook]:
         user_book = await self.get(id)
@@ -71,7 +75,8 @@ class UserBookRepository(BaseRepository[UserBook], IUserBookRepository):
     
     async def has_active_loan(self, user_book_id: UUID) -> bool:
         result = await self._db.execute(select(func.count()).where(and_(Loan.user_book_id == user_book_id, Loan.status.in_(["active", "overdue"]))))
-        return result.scalar() > 0
+        count = result.scalar()
+        return count > 0 if count is not None else False
     
     async def count_user_library(self, user_id: UUID) -> int:
         result = await self._db.execute(select(func.count()).where(UserBook.user_id == user_id))
@@ -102,7 +107,7 @@ class UserBookRepository(BaseRepository[UserBook], IUserBookRepository):
         result = await self._db.execute(select(UserBook).where(UserBook.user_id == user_id, UserBook.book_id == book_id))
         return result.scalar_one_or_none()
     
-    async def update(self, user_book_id: UUID, obj_in: dict) -> Optional[UserBook]:
+    async def update(self, user_book_id: UUID, obj_in: dict) -> Optional[UserBook]:  # type: ignore[override]
         user_book = await self.get(user_book_id)
         if not user_book:
             return None

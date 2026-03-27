@@ -90,7 +90,7 @@ class LoanRequestRepository(ILoanRequestRepository):
         if status:
             count_query = count_query.where(LoanRequest.status == status)
         total_result = await self._db.execute(count_query)
-        total = total_result.scalar()
+        total = total_result.scalar() or 0
         
         query = (select(LoanRequest)
             .options(
@@ -110,7 +110,7 @@ class LoanRequestRepository(ILoanRequestRepository):
         if status:
             count_query = count_query.where(LoanRequest.status == status)
         total_result = await self._db.execute(count_query)
-        total = total_result.scalar()
+        total = total_result.scalar() or 0
         
         query = (select(LoanRequest)
             .options(
@@ -144,7 +144,8 @@ class LoanRequestRepository(ILoanRequestRepository):
                 )
             )
         )
-        return result.scalar() > 0
+        count = result.scalar()
+        return count > 0 if count is not None else False
 
     async def count_pending_for_owner(self, user_id: uuid.UUID) -> int:
         result = await self._db.execute(

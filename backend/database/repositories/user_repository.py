@@ -30,7 +30,8 @@ class UserRepository(IUserRepository):
 
     async def email_exists(self, email: str) -> bool:
         result = await self._db.execute(select(func.count()).where(User.email == email))
-        return result.scalar() > 0
+        count = result.scalar()
+        return count > 0 if count is not None else False
 
     async def get_multi(self, skip: int = 0, limit: int = 100) -> tuple[List[User], int]:
         count_result = await self._db.execute(select(func.count()).select_from(User))
@@ -133,7 +134,8 @@ class UserRepository(IUserRepository):
 
     async def exists(self, id: UUID) -> bool:
         result = await self._db.execute(select(func.count()).where(User.id == id))
-        return result.scalar() > 0
+        count = result.scalar()
+        return count > 0 if count is not None else False
 
     async def count_user_books(self, user_id: UUID) -> int:
         from database.models import UserBook
@@ -172,4 +174,4 @@ class UserRepository(IUserRepository):
     
     async def get_recent_users(self, limit: int = 5) -> List[User]:
         result = await self._db.execute(select(User).order_by(User.created_at.desc()).limit(limit))
-        return result.scalars().all()
+        return list(result.scalars().all())

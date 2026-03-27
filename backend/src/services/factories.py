@@ -1,13 +1,10 @@
 from functools import lru_cache
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.services.interfaces.factory import IRepositoryFactory, IServiceFactory
+from src.services.interfaces.auth import IAuthService, ITokenService
 from src.services.interfaces.loans import ILoanService, ILoanRequestService
 from src.services.interfaces.messages import IMessageService
-from src.services.interfaces.ai import (
-    IVectorService,
-    IAIService,
-    IMarkdownGeneratorService,
-)
+from src.services.interfaces.ai import IVectorService, IAIService, IMarkdownGeneratorService
 from src.services.interfaces.cover import ICoverService
 from src.services.interfaces.book_discovery import IBookDiscoveryService
 from database.repositories.user_repository import UserRepository
@@ -46,25 +43,32 @@ class RepositoryFactory(IRepositoryFactory):
         return LoanRepository(self._db)
     def create_loan_request_repository(self):
         return LoanRequestRepository(self._db)
-    def create_message_repository(self):
+    def create_message_repository(self) -> MessageRepository:
         return MessageRepository(self._db)
 
 
 class ServiceFactory(IServiceFactory):
-    def __init__(self, db: AsyncSession = None, repo_factory: IRepositoryFactory = None):
+    def __init__(self, db: AsyncSession | None = None, repo_factory: IRepositoryFactory | None = None):
+        if db is None and repo_factory is None:
+            raise ValueError("Either db or repo_factory must be provided")
         self._db = db
-        self._repo_factory = repo_factory or (RepositoryFactory(db) if db else None)
-    def create_auth_service(self):
+        self._repo_factory = repo_factory or RepositoryFactory(db)  
+    def create_auth_service(self) -> IAuthService:
+        assert self._repo_factory is not None
         return AuthService(repository=self._repo_factory.create_user_repository(), book_repo=self._repo_factory.create_book_repository())
-    def create_book_service(self):
+    def create_book_service(self) -> BookService:
+        assert self._repo_factory is not None
         return BookService(repository=self._repo_factory.create_book_repository())
     def create_loan_service(self) -> ILoanService:
+        assert self._repo_factory is not None
         return LoanService(
             loan_repo=self._repo_factory.create_loan_repository(),
             user_repo=self._repo_factory.create_user_repository(),
             user_book_repo=self._repo_factory.create_user_book_repository()
         )
     def create_loan_request_service(self) -> ILoanRequestService:
+        assert self._repo_factory is not None
+        assert self._db is not None
         return LoanRequestService(
             request_repo=self._repo_factory.create_loan_request_repository(),
             loan_repo=self._repo_factory.create_loan_repository(),
@@ -73,6 +77,7 @@ class ServiceFactory(IServiceFactory):
             db=self._db
         )
     def create_message_service(self) -> IMessageService:
+        assert self._repo_factory is not None
         return MessageService(
             message_repo=self._repo_factory.create_message_repository(),
             request_repo=self._repo_factory.create_loan_request_repository(),
@@ -80,21 +85,26 @@ class ServiceFactory(IServiceFactory):
         )
     def create_cover_service(self) -> ICoverService:
         return ShareBookCoverService(openai_api_key=settings.OPENAI_API_KEY)
-    def create_admin_dashboard_service(self):
+    def create_admin_dashboard_service(self) -> AdminDashboardService:
+        assert self._repo_factory is not None
         return AdminDashboardService(
             user_repo=self._repo_factory.create_user_repository(),
             book_repo=self._repo_factory.create_book_repository(),
             loan_repo=self._repo_factory.create_loan_repository(),
             user_book_repo=self._repo_factory.create_user_book_repository()
         )
-    def create_user_admin_service(self):
+    def create_user_admin_service(self) -> UserAdminService:
+        assert self._repo_factory is not None
+        assert self._db is not None
         return UserAdminService(
             db=self._db,
             user_repo=self._repo_factory.create_user_repository(),
             user_book_repo=self._repo_factory.create_user_book_repository(),
             loan_repo=self._repo_factory.create_loan_repository()
         )
-    def create_book_admin_service(self):
+    def create_book_admin_service(self) -> BookAdminService:
+        assert self._repo_factory is not None
+        assert self._db is not None
         return BookAdminService(
             db=self._db,
             book_repo=self._repo_factory.create_book_repository(),
@@ -104,28 +114,32 @@ class ServiceFactory(IServiceFactory):
     def create_book_discovery_service(self) -> IBookDiscoveryService:
         return UnifiedBookSearch(openai_api_key=settings.OPENAI_API_KEY)
     def create_vector_service(self) -> IVectorService:
+        assert self._db is not None
         return VectorService(vector_db=self._db)
     def create_ai_service(self) -> IAIService:
         vector_service = self.create_vector_service()
         return AIService(vector_service=vector_service)
     def create_markdown_generator_service(self) -> IMarkdownGeneratorService:
+        assert self._db is not None
         return MarkdownGeneratorService(db_session=self._db)
-    def create_user_book_service(self):
+    def create_user_book_service(self) -> UserBookService:
+        assert self._db is not None
+        assert self._repo_factory is not None
         return UserBookService(
             db=self._db,
             user_book_repo=self._repo_factory.create_user_book_repository(),
             book_repo=self._repo_factory.create_book_repository(),
             user_repo=self._repo_factory.create_user_repository()
         )
-    def create_token_service(self):
+    def create_token_service(self) -> TokenService:
         return TokenService()
-    def create_user_service(self):
+    def create_user_service(self) -> IAuthService:
         return self.create_auth_service()
-    def create_registration_service(self):
+    def create_registration_service(self) -> IAuthService:
         return self.create_auth_service()
-    def create_password_service(self):
+    def create_password_service(self) -> IAuthService:
         return self.create_auth_service()
-    def create_book_catalog_service(self):
+    def create_book_catalog_service(self) -> BookService:
         return self.create_book_service()
-    def create_library_management_service(self):
+    def create_library_management_service(self) -> UserBookService:
         return self.create_user_book_service()

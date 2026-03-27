@@ -6,11 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.interfaces import IBookRepository, IUserBookRepository, IUserRepository
 from src.schemas.book import BookCreate
 from src.services.book_discovery import UnifiedBookSearch
+from src.services.interfaces.books import IUserBookService
 
 logger = logging.getLogger(__name__)
 
 
-class UserBookService:
+class UserBookService(IUserBookService):
     def __init__(
         self,
         db: AsyncSession,

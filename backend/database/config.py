@@ -38,7 +38,7 @@ async def check_database_exists() -> bool:
     try:
         async with engine.connect() as conn:
             result = await conn.execute(text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users')"))
-            return result.scalar()
+            return bool(result.scalar())
     except Exception:
         return False
 
@@ -66,7 +66,7 @@ async def get_db_status() -> dict:
     try:
         async with engine.connect() as conn:
             result = await conn.execute(text("SELECT version()"))
-            version = result.scalar()
+            version = result.scalar() or "unknown"
             tables_exist = await check_database_exists()
             return {
                 "connected": True,

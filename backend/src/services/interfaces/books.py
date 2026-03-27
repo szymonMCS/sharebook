@@ -4,7 +4,7 @@ from typing import Optional, List, TYPE_CHECKING
 from uuid import UUID
 
 if TYPE_CHECKING:
-    from src.schemas.book import BookCreate, BookUpdate, BookResponse
+    from src.schemas.book import BookCreate, BookUpdate, BookResponse, CommunityBookResponse
 
 
 class IBookService(ABC):
@@ -31,7 +31,7 @@ class IBookService(ABC):
         status: str | None = None,
         search: str | None = None,
         author: str | None = None
-    ) -> list["BookResponse"]: ...
+    ) -> list["CommunityBookResponse"]: ...
 
     @abstractmethod
     async def count_community_books(
@@ -81,16 +81,28 @@ class IUserBookService(ABC):
     async def add_book_to_user(self, user_id: UUID, book_id: UUID, **kwargs) -> "BookResponse": ...
 
     @abstractmethod
+    async def add_book_with_placeholder(self, user_id: UUID, isbn: str, condition: Optional[str] = None, is_lendable: bool = True) -> dict: ...
+
+    @abstractmethod
     async def get_user_library(self, user_id: UUID) -> list: ...
+
+    @abstractmethod
+    async def get_user_book_copy(self, user_id: UUID, user_book_id: UUID) -> Optional[dict]: ...
 
     @abstractmethod
     async def remove_book_from_user(self, user_id: UUID, book_id: UUID) -> bool: ...
 
     @abstractmethod
-    async def update_book_status(self, user_id: UUID, book_id: UUID, status: str) -> "BookResponse": ...
+    async def remove_from_library(self, user_id: UUID, user_book_id: UUID) -> bool: ...
+
+    @abstractmethod
+    async def update_book_status(self, user_id: UUID, user_book_id: UUID, new_status: str) -> Optional[dict]: ...
 
     @abstractmethod
     async def toggle_lendable(self, user_book_id: UUID) -> "BookResponse": ...
+
+    @abstractmethod
+    async def set_lendable_by_id(self, user_id: UUID, user_book_id: UUID, is_lendable: bool) -> Optional[dict]: ...
 
 
 class IBookMetadataProvider(ABC):

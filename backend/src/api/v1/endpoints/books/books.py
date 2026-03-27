@@ -46,6 +46,8 @@ async def enrich_book(
     
     book_repo = BookRepository(db)
     book_db = await book_repo.get_by_id(book_id)
+    if book_db is None:
+        raise BookNotFoundException()
     if book_db.title in ["", "Wczytywanie...", "Unknown"] or not book_db.author:
         background_tasks.add_task(
             enrich_and_fetch_cover_background,
@@ -68,11 +70,6 @@ async def get_book_by_isbn(isbn: str, book_service: IBookService = Depends(get_b
 async def get_book(book_id: UUID, book_service: IBookService = Depends(get_book_service)):
     book = await book_service.get_book(book_id)
     return {"success": True, "data": book}
-async def get_book_by_isbn(isbn: str, book_service: IBookService = Depends(get_book_service)):
-    book = await book_service.get_by_isbn(isbn)
-    if not book:
-        raise BookNotFoundException()
-    return {"success": True, "data": book}
 
 @router.post("", response_model=BookResponse, status_code=status.HTTP_201_CREATED)
 async def create_book(book_data: BookCreate, current_user = Depends(get_current_active_user), book_service: IBookService = Depends(get_book_service),):
@@ -84,7 +81,7 @@ async def create_book(book_data: BookCreate, current_user = Depends(get_current_
 
 @router.put("/{book_id}", response_model=BookResponse)
 async def update_book(book_id: UUID, book_data: BookUpdate, current_user = Depends(get_current_active_admin), book_service: IBookService = Depends(get_book_service),):
-    book = await book_service.update_book(book_id, book=book_data)
+    book = await book_service.update_book(book_id, user_id=current_user.id, data=book_data)
     return book
 
 @router.patch("/{book_id}", response_model=BookResponse)
@@ -93,10 +90,10 @@ async def partial_update_book(book_id: UUID, book_data: BookUpdate, current_user
     if not update_data:
         from src.core.exceptions import ValidationException
         raise ValidationException("No fields to update")
-    book = await book_service.update_book(book_id, book=book_data)
+    book = await book_service.update_book(book_id, user_id=current_user.id, data=book_data)
     return book
 
 @router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_book(book_id: UUID, current_user = Depends(get_current_active_admin),  book_service: IBookService = Depends(get_book_service),):
-    await book_service.delete_book(book_id)
+    await book_service.delete_book(book_id, user_id=current_user.id)
     return None

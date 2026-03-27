@@ -34,13 +34,19 @@ async def book_covers_websocket(websocket: WebSocket) -> None:
                 action = data.get("action", "").lower()
                 book_id = data.get("book_id")
 
+                if action in ("subscribe", "unsubscribe"):
+                    if not isinstance(book_id, str) or not book_id:
+                        await manager._broadcaster.send_personal(websocket, {"type": "error", "message": "book_id is required and must be a string"})
+                        continue
+                    book_id = book_id  # type: ignore
+
                 match action:
                     case "ping":
                         await manager.handle_ping(websocket)
                     case "subscribe":
-                        await manager.handle_subscribe(book_id, websocket)
+                        await manager.handle_subscribe(book_id, websocket)  # type: ignore
                     case "unsubscribe":
-                        await manager.handle_unsubscribe(book_id, websocket)
+                        await manager.handle_unsubscribe(book_id, websocket)  # type: ignore
                     case _:
                         await manager._broadcaster.send_personal(websocket, {"type": "error", "message": f"Unknown action: {action}"})
             except WebSocketDisconnect:

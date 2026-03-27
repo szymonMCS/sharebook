@@ -2,7 +2,6 @@ import uuid
 from datetime import datetime
 from typing import Optional, List, Any, Tuple
 from sqlalchemy import select, or_, func, update as sa_update, String
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.models import Book, UserBook, User, Loan
 from database.interfaces import IBookRepository
@@ -32,7 +31,8 @@ class BookRepository(IBookRepository):
     
     async def exists(self, book_id: uuid.UUID) -> bool:
         result = await self._db.execute(select(func.count()).where(Book.id == book_id))
-        return result.scalar() > 0
+        count = result.scalar()
+        return count > 0 if count is not None else False
     
     async def get_by_id_with_owner(self, book_id: uuid.UUID) -> Optional[tuple[Book, UserBook, User]]:
         result = await self._db.execute(
@@ -42,7 +42,10 @@ class BookRepository(IBookRepository):
             .where(Book.id == book_id)
             .limit(1)
         )
-        return result.first()
+        row = result.first()
+        if row is None:
+            return None
+        return (row[0], row[1], row[2])
     
     async def search(self, query: str, skip: int = 0, limit: int = 20, filters: Optional[dict] = None) -> Tuple[List[Book], int]:
         stmt = select(Book)
@@ -63,7 +66,7 @@ class BookRepository(IBookRepository):
             count_stmt = count_stmt.where(*conditions)
         
         count_result = await self._db.execute(count_stmt)
-        total = count_result.scalar()
+        total = count_result.scalar() or 0
         stmt = stmt.offset(skip).limit(limit)
         result = await self._db.execute(stmt)
         books = list(result.scalars().all())
@@ -158,10 +161,10 @@ class BookRepository(IBookRepository):
                 count_stmt = count_stmt.where(author_filter)
         
         count_result = await self._db.execute(count_stmt)
-        total = count_result.scalar()
+        total = count_result.scalar() or 0
         stmt = stmt.offset(skip).limit(limit)
         result = await self._db.execute(stmt)
-        items = result.all()
+        items = list(result.all())
         return items, total
     
     async def count_all(self) -> int:

@@ -11,11 +11,11 @@ class APIResponse(BaseModel, Generic[T]):
     meta: Optional[dict] = None
 
     @classmethod
-    def ok(cls, data: T = None, message: str = None, meta: dict = None) -> "APIResponse[T]":
+    def ok(cls, data: Optional[T] = None, message: Optional[str] = None, meta: Optional[dict] = None) -> "APIResponse[T]":
         return cls(success=True, data=data, message=message, meta=meta)
 
     @classmethod
-    def error(cls, message: str, data: T = None, meta: dict = None) -> "APIResponse[T]":
+    def error(cls, message: str, data: Optional[T] = None, meta: Optional[dict] = None) -> "APIResponse[T]":
         return cls(success=False, data=data, message=message, meta=meta)
 
 

@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import FileResponse
 from typing import List, Optional
 from pydantic import BaseModel
@@ -36,24 +36,9 @@ class BatchRequest(BaseModel):
 @router.post("/fetch", response_model=CoverResponse)
 async def fetch_or_generate_cover(
     request: BookCoverRequest,
-    background_tasks: BackgroundTasks = None,
     sync: bool = True,
     service=Depends(get_cover_service_impl),
 ):
-    if not sync and background_tasks:
-        background_tasks.add_task(
-            service.fetch_cover,
-            isbn=request.isbn,
-            book_title=request.title,
-            book_author=request.author,
-            book_genre=request.genre
-        )
-        return CoverResponse(
-            isbn=request.isbn,
-            status="processing",
-            fallback_url=f"https://covers.openlibrary.org/b/isbn/{request.isbn}-M.jpg",
-            source="none"
-        )
     result = await service.fetch_cover(
         isbn=request.isbn,
         book_title=request.title,
@@ -64,7 +49,7 @@ async def fetch_or_generate_cover(
 
 
 @router.post("/batch", response_model=List[CoverResponse])
-async def batch_covers(request: BatchRequest, background_tasks: BackgroundTasks = None, service=Depends(get_cover_service_impl),):
+async def batch_covers(request: BatchRequest, service=Depends(get_cover_service_impl),):
     if len(request.books) > 50:
         raise ValidationException("Max 50 books per request")
     books_data = [{"isbn": b.isbn, "title": b.title or "Unknown", "author": b.author or "Unknown", "genre": b.genre} for b in request.books]

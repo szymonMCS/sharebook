@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Literal
 from src.config import settings
+from src.services.interfaces.cover import ICoverService
 from .downloader import CoverDownloader
 from .simple_storage import SimpleCoverStorage
 from .ai_generator import CoverAIGenerator
@@ -31,7 +32,7 @@ class SimpleCoverResult:
         return f"https://covers.openlibrary.org/b/isbn/{self.isbn}-M.jpg"
 
 
-class ShareBookCoverService:
+class ShareBookCoverService(ICoverService):
     def __init__(
         self,
         covers_dir: Optional[Path] = None,
