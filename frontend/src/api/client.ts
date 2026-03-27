@@ -63,6 +63,21 @@ export async function apiClient<T>(
       throw new Error(errorData.detail || errorData.message || 'Brak dostępu');
     }
     
+    // Handle validation errors (422) from FastAPI/Pydantic
+    if (response.status === 422) {
+      const errorData = await response.json().catch(() => ({ detail: 'Nieprawidłowe dane' }));
+      // Pydantic returns { detail: [{ loc: [...], msg: "...", type: "..." }] }
+      if (Array.isArray(errorData.detail)) {
+        const messages = errorData.detail.map((err: any) => {
+          // Remove "Value error, " prefix if present
+          const msg = err.msg?.replace(/^Value error,\s*/i, '') || 'Nieprawidłowe dane';
+          return `${msg}`;
+        });
+        throw new Error(messages.join('. '));
+      }
+      throw new Error(errorData.detail || 'Nieprawidłowe dane');
+    }
+    
     const errorData = await response.json().catch(() => ({ detail: 'Błąd serwera' }));
     const errorMessage = errorData.detail || errorData.message || errorData.error || 'Błąd serwera';
     throw new Error(errorMessage);
