@@ -78,25 +78,3 @@ class IAIService(ABC):
     async def get_recommendation(self, user_query: str) -> AIResponse:
         """Get book recommendation using RAG."""
         pass
-
-
-class IMarkdownGeneratorService(ABC):
-    """Interface for markdown generator service.
-    
-    Generates markdown catalog of books for RAG knowledge base.
-    """
-    
-    @abstractmethod
-    async def generate_catalog(self) -> str:
-        """Generate markdown catalog of all books."""
-        pass
-    
-    @abstractmethod
-    async def save_to_file(self, content: str, path: Optional[str] = None) -> str:
-        """Save markdown content to file. Returns file path."""
-        pass
-    
-    @abstractmethod
-    async def regenerate(self, path: Optional[str] = None) -> str:
-        """Regenerate and save catalog. Returns file path."""
-        pass

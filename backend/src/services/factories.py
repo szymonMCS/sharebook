@@ -4,7 +4,7 @@ from src.services.interfaces.factory import IRepositoryFactory, IServiceFactory
 from src.services.interfaces.auth import IAuthService, ITokenService
 from src.services.interfaces.loans import ILoanService, ILoanRequestService
 from src.services.interfaces.messages import IMessageService
-from src.services.interfaces.ai import IVectorService, IAIService, IMarkdownGeneratorService
+from src.services.interfaces.ai import IVectorService, IAIService
 from src.services.interfaces.cover import ICoverService
 from src.services.interfaces.book_discovery import IBookDiscoveryService
 from database.repositories.user_repository import UserRepository
@@ -21,7 +21,6 @@ from src.services.admin import AdminDashboardService, UserAdminService, BookAdmi
 from src.services.ai import (
     VectorService,
     AIService,
-    MarkdownGeneratorService,
 )
 from src.services.cover import ShareBookCoverService
 from src.services.book_discovery import UnifiedBookSearch
@@ -119,9 +118,6 @@ class ServiceFactory(IServiceFactory):
     def create_ai_service(self) -> IAIService:
         vector_service = self.create_vector_service()
         return AIService(vector_service=vector_service)
-    def create_markdown_generator_service(self) -> IMarkdownGeneratorService:
-        assert self._db is not None
-        return MarkdownGeneratorService(db_session=self._db)
     def create_user_book_service(self) -> UserBookService:
         assert self._db is not None
         assert self._repo_factory is not None

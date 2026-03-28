@@ -28,7 +28,7 @@ pip install -r requirements.txt
 cp .env.example .env
 
 # Uruchom migracje (jeśli potrzebne) i serwer
-python -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn src.main:app --reload --port 8000
 ```
 
 ### Frontend

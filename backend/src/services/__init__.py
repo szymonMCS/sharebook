@@ -51,7 +51,6 @@ from .ai import (
     AIResponse,
     Source,
     AIServiceException,
-    MarkdownGeneratorService,
 )
 from .websocket import (
     ConnectionRegistry,
@@ -106,7 +105,6 @@ __all__ = [
     "AIResponse",
     "Source",
     "AIServiceException",
-    "MarkdownGeneratorService",
     "ConnectionRegistry",
     "SubscriptionManager",
     "Broadcaster",
