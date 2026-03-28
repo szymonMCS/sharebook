@@ -51,19 +51,10 @@ class IUserAdminService(ABC):
     async def list_users(self, page: int = 1, per_page: int = 20, search: Optional[str] = None, role: Optional[str] = None, is_active: Optional[bool] = None) -> UserListResult:
         pass
     @abstractmethod
-    async def get_user_details(self, user_id: UUID) -> dict:
-        pass
-    @abstractmethod
     async def update_user_role(self, user_id: UUID, new_role: str, current_admin_id: UUID) -> dict:
         pass
     @abstractmethod
     async def reset_user_password(self, user_id: UUID, current_admin_id: UUID) -> dict:
-        pass
-    @abstractmethod
-    async def deactivate_user(self, user_id: UUID, current_admin_id: UUID) -> dict:
-        pass
-    @abstractmethod
-    async def activate_user(self, user_id: UUID, current_admin_id: UUID) -> dict:
         pass
     @abstractmethod
     async def delete_user(self, user_id: UUID, current_admin_id: UUID, hard_delete: bool = False) -> None:
@@ -75,13 +66,7 @@ class IBookAdminService(ABC):
     async def list_books(self, page: int = 1, per_page: int = 20, search: Optional[str] = None, has_loans: Optional[bool] = None) -> BookListResult:
         pass
     @abstractmethod
-    async def get_book_details(self, book_id: UUID) -> dict:
-        pass
-    @abstractmethod
     async def delete_book(self, book_id: UUID, force: bool = False) -> dict:
-        pass
-    @abstractmethod
-    async def merge_books(self, source_book_id: UUID, target_book_id: UUID) -> dict:
         pass
     @abstractmethod
     async def update_book_metadata(self, book_id: UUID, metadata: dict) -> dict:

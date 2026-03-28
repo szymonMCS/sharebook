@@ -16,6 +16,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useBorrowedBooks, useReturnBook } from '@/hooks/useUserBooks';
+import { useUserBooksStore } from '@/store/userBooksStore';
 
 import { format, isPast } from 'date-fns';
 import { pl } from 'date-fns/locale';
@@ -141,6 +142,7 @@ const BorrowedBookCard = memo(function BorrowedBookCard({ book, onReturn, isRetu
 export function BorrowedBooksSection() {
   const { data: borrowedBooks = [], isLoading, error, refetch } = useBorrowedBooks();
   const returnBook = useReturnBook();
+  const { fetchRequests } = useUserBooksStore();
 
   // Sort by due date (overdue first, then by date)
   const sortedBooks = useMemo(() => {
@@ -166,15 +168,20 @@ export function BorrowedBooksSection() {
       console.log('[BorrowedBooks] Return mutation completed');
       toast.success('Książka została zwrócona pomyślnie');
       
-      // Wymuś odświeżenie listy
+      // Odśwież listę wypożyczonych książek
       console.log('[BorrowedBooks] Refetching list...');
       await refetch();
       console.log('[BorrowedBooks] Refetch completed');
+      
+      // Odśwież prośby o wypożyczenie (żeby zaktualizować status zaakceptowanych próśb)
+      console.log('[BorrowedBooks] Refreshing requests...');
+      await fetchRequests();
+      console.log('[BorrowedBooks] Requests refreshed');
     } catch (error) {
       console.error('[BorrowedBooks] Return error:', error);
       toast.error(error instanceof Error ? error.message : 'Nie udało się zwrócić książki');
     }
-  }, [returnBook, refetch]);
+  }, [returnBook, refetch, fetchRequests]);
 
   return (
     <div className="space-y-6">

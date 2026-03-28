@@ -59,13 +59,6 @@ async def enrich_book(
     else:
         return {"success": True, "message": "Book already enriched", "status": "completed"}
 
-@router.get("/isbn/{isbn}", response_model=dict)
-async def get_book_by_isbn(isbn: str, book_service: IBookService = Depends(get_book_service)):
-    book = await book_service.get_by_isbn(isbn)
-    if not book:
-        raise BookNotFoundException()
-    return {"success": True, "data": book}
-
 @router.get("/{book_id}", response_model=dict)
 async def get_book(book_id: UUID, book_service: IBookService = Depends(get_book_service)):
     book = await book_service.get_book(book_id)

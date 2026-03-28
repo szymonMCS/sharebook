@@ -110,11 +110,6 @@ class UserBookResponse(BaseModel):
     updated_at: datetime
 
 
-class BookWithOwnersResponse(BookResponse):
-    owners: List[OwnerInfo] = Field(default_factory=list, description="List of users who own this book")
-    available_count: int = Field(default=0, description="Number of available copies")
-
-
 class CommunityBookResponse(BookBase):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
     
@@ -166,13 +161,4 @@ class CommunityBooksFilter(BaseModel):
         return v
 
 
-class BookChunkResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
-    
-    id: UUID
-    book_id: UUID
-    book_title: str
-    book_author: Optional[str] = None
-    content: str
-    chunk_index: int = 0
-    created_at: datetime
+

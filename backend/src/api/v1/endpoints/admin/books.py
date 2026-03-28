@@ -142,20 +142,6 @@ async def update_user_book_status(
         "message": "Status książki zaktualizowany"
     }
 
-@router.post("/merge", response_model=dict)
-async def merge_books(
-    source_id: UUID,
-    target_id: UUID,
-    current_user: User = Depends(get_current_active_admin),
-    book_service: BookAdminService = Depends(get_book_admin_service)
-):
-    result = await book_service.merge_books(source_book_id=source_id, target_book_id=target_id)
-    return {
-        "success": True,
-        "data": result,
-        "message": f"Books merged. Moved {result['moved_copies']} copies."
-    }
-
 @router.post("", response_model=dict)
 async def create_book(
     book_data: BookCreate,
@@ -167,15 +153,6 @@ async def create_book(
         "success": True,
         "data": book,
         "message": "Książka dodana"
-    }
-
-@router.get("/{book_id}", response_model=dict)
-async def get_book_details(book_id: UUID, current_user: User = Depends(get_current_active_admin), book_service: BookAdminService = Depends(get_book_admin_service)):
-    result = await book_service.get_book_details(book_id)
-    return {
-        "success": True,
-        "data": result,
-        "message": "Book details retrieved"
     }
 
 @router.patch("/{book_id}", response_model=dict)

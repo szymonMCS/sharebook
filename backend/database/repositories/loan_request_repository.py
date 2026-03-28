@@ -125,14 +125,6 @@ class LoanRequestRepository(ILoanRequestRepository):
         result = await self._db.execute(query)
         return list(result.scalars().all()), total
     
-    async def get_requests_for_user_book(self, user_book_id: uuid.UUID, status: Optional[str] = None,) -> List[LoanRequest]:
-        query = select(LoanRequest).where(LoanRequest.user_book_id == user_book_id)
-        if status:
-            query = query.where(LoanRequest.status == status)
-        query = query.order_by(LoanRequest.created_at.desc())
-        result = await self._db.execute(query)
-        return list(result.scalars().all())
-    
     async def has_pending_request(self, user_book_id: uuid.UUID, requester_id: uuid.UUID) -> bool:
         result = await self._db.execute(
             select(func.count())

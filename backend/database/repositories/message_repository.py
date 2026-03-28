@@ -64,36 +64,6 @@ class MessageRepository(IMessageRepository):
         result = await self._db.execute(stmt)
         return list(result.scalars().all())
     
-    async def get_unread_messages_for_user(self, user_id: uuid.UUID,) -> List[Message]:
-        result = await self._db.execute(
-            select(Message)
-            .join(LoanRequest, Message.loan_request_id == LoanRequest.id)
-            .where(
-                Message.is_read == False,
-                Message.sender_id != user_id,
-                Message.message_type == "text",
-                ((LoanRequest.owner_id == user_id) | (LoanRequest.requester_id == user_id))
-            )
-            .order_by(Message.created_at.desc())
-        )
-        return list(result.scalars().all())
-    
-    async def count_unread_for_user(self, user_id: uuid.UUID) -> int:
-        result = await self._db.execute(
-            select(func.count())
-            .join(LoanRequest, Message.loan_request_id == LoanRequest.id)
-            .where(
-                Message.is_read == False,
-                Message.sender_id != user_id,
-                ((LoanRequest.owner_id == user_id) | (LoanRequest.requester_id == user_id))
-            )
-        )
-        return result.scalar() or 0
-    
-    async def count_messages_for_request(self, loan_request_id: uuid.UUID) -> int:
-        result = await self._db.execute(select(func.count()).where(Message.loan_request_id == loan_request_id))
-        return result.scalar() or 0
-    
     async def mark_all_as_read(self, loan_request_id: uuid.UUID, user_id: uuid.UUID) -> int:
         return await self.mark_all_as_read_for_request(loan_request_id, user_id)
     
