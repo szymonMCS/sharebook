@@ -17,7 +17,6 @@ from .messages import IMessageService
 from .ai import (
     IVectorService,
     IAIService,
-    IMarkdownGeneratorService,
     Source,
     AIResponse,
 )
@@ -54,7 +53,6 @@ __all__ = [
     "IMessageService",
     "IVectorService",
     "IAIService",
-    "IMarkdownGeneratorService",
     "Source",
     "AIResponse",
     "ICoverService",

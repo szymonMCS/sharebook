@@ -5,7 +5,7 @@ if TYPE_CHECKING:
     from src.services.interfaces.auth import IAuthService, ITokenService
     from src.services.interfaces.loans import ILoanService, ILoanRequestService
     from src.services.interfaces.messages import IMessageService
-    from src.services.interfaces.ai import IVectorService, IAIService, IMarkdownGeneratorService
+    from src.services.interfaces.ai import IVectorService, IAIService
     from src.services.interfaces.cover import ICoverService
     from src.services.interfaces.book_discovery import IBookDiscoveryService
     from src.services.books import BookService, UserBookService
@@ -80,9 +80,6 @@ class IServiceFactory(ABC):
         pass
     @abstractmethod
     def create_ai_service(self) -> "IAIService":
-        pass
-    @abstractmethod
-    def create_markdown_generator_service(self) -> "IMarkdownGeneratorService":
         pass
     @abstractmethod
     def create_cover_service(self) -> "ICoverService":
