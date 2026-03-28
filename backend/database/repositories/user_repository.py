@@ -28,18 +28,6 @@ class UserRepository(IUserRepository):
         result = await self._db.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
 
-    async def email_exists(self, email: str) -> bool:
-        result = await self._db.execute(select(func.count()).where(User.email == email))
-        count = result.scalar()
-        return count > 0 if count is not None else False
-
-    async def get_multi(self, skip: int = 0, limit: int = 100) -> tuple[List[User], int]:
-        count_result = await self._db.execute(select(func.count()).select_from(User))
-        total = count_result.scalar() or 0
-        result = await self._db.execute(select(User).offset(skip).limit(limit))
-        users = list(result.scalars().all())
-        return users, total
-
     async def get_multi_with_filters(
         self,
         skip: int = 0,
@@ -132,16 +120,6 @@ class UserRepository(IUserRepository):
             await self._db.rollback()
             raise DatabaseError(f"Database error: {e}")
 
-    async def exists(self, id: UUID) -> bool:
-        result = await self._db.execute(select(func.count()).where(User.id == id))
-        count = result.scalar()
-        return count > 0 if count is not None else False
-
-    async def count_user_books(self, user_id: UUID) -> int:
-        from database.models import UserBook
-        result = await self._db.execute(select(func.count()).where(UserBook.user_id == user_id))
-        return result.scalar() or 0
-
     async def count_all(self) -> int:
         result = await self._db.execute(select(func.count()).select_from(User))
         return result.scalar() or 0
@@ -169,9 +147,4 @@ class UserRepository(IUserRepository):
             for row in result.all()
         ]
     
-    async def count_users(self) -> int:
-        return await self.count_all()
-    
-    async def get_recent_users(self, limit: int = 5) -> List[User]:
-        result = await self._db.execute(select(User).order_by(User.created_at.desc()).limit(limit))
-        return list(result.scalars().all())
+

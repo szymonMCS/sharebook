@@ -117,10 +117,6 @@ class LoanRequestActionResponse(BaseModel):
     data: Optional[LoanRequestResponse] = None
 
 
-class RejectRequestRequest(BaseModel):
-    reason: Optional[str] = Field(None, max_length=500, description="Powod odrzucenia")
-
-
 class LoanRequestAction(BaseModel):
     action: str = Field(..., pattern="^(accept|reject)$", description="Akcja do wykonania: accept lub reject")
     reason: Optional[str] = Field(None, max_length=500, description="Powód odrzucenia (wymagany tylko dla action=reject)")

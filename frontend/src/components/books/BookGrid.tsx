@@ -136,10 +136,9 @@ interface BookGridProps {
 export function BookGrid({ books, isLoading, onRequestBorrow }: BookGridProps) {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   
-  // Remove duplicates based on book id
-  const uniqueBooks = books.filter((book, index, self) => 
-    index === self.findIndex((b) => b.id === book.id)
-  );
+  // Each book entry represents a unique user copy (user_book_id)
+  // so we don't deduplicate - show all copies even if they share the same book details
+  const displayBooks = books;
 
   const handleRequestClick = (book: Book) => {
     if (book.status === 'available' && book.is_lendable && book.user_book_id) {
@@ -171,7 +170,7 @@ export function BookGrid({ books, isLoading, onRequestBorrow }: BookGridProps) {
     );
   }
 
-  if (uniqueBooks.length === 0) {
+  if (displayBooks.length === 0) {
     return (
       <div className="bg-white rounded-xl p-12 border border-stone-200/60 text-center">
         <BookOpen className="w-16 h-16 text-stone-200 mx-auto mb-4" />
@@ -188,8 +187,8 @@ export function BookGrid({ books, isLoading, onRequestBorrow }: BookGridProps) {
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-        {uniqueBooks.map((book) => (
-          <BookCard key={book.id} book={book} onRequestBorrow={handleRequestClick} />
+        {displayBooks.map((book) => (
+          <BookCard key={book.user_book_id || book.id} book={book} onRequestBorrow={handleRequestClick} />
         ))}
       </div>
 

@@ -164,16 +164,7 @@ class IUserBookRepository(ABC):
     async def delete(self, user_book_id: UUID) -> bool:
         pass
     @abstractmethod
-    async def count_user_library(self, user_id: UUID) -> int:
-        pass
-    @abstractmethod
-    async def count_lent_by_user(self, user_id: UUID) -> int:
-        pass
-    @abstractmethod
     async def count_by_status(self, status: str) -> int:
-        pass
-    @abstractmethod
-    async def get_owners_for_book(self, book_id: UUID) -> List[User]:
         pass
     @abstractmethod
     async def get_by_user_and_book(self, user_id: UUID, book_id: UUID) -> Optional[UserBook]:

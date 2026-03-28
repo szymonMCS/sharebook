@@ -94,9 +94,4 @@ class UserProfileResponse(UserResponse):
     books_count: int = Field(default=0, description="Number of books owned by the user", examples=[5])
 
 
-class TokenResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-    
-    access_token: str  
-    refresh_token: str  
-    token_type: str = "bearer"  
+

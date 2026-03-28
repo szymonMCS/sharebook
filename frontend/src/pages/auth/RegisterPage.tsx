@@ -120,8 +120,9 @@ export function RegisterPage() {
         const backendError = err.message.toLowerCase();
         if (backendError.includes('already registered') || backendError.includes('already exists') || backendError.includes('duplicate')) {
           setError('Użytkownik z tym adresem email już istnieje');
-        } else if (backendError.includes('password too weak') || backendError.includes('weak password')) {
-          setError('Hasło jest za słabe. Użyj silniejszego hasła (min. 8 znaków, wielka litera, cyfra, znak specjalny)');
+        } else if (backendError.includes('hasło jest za słabe') || backendError.includes('password')) {
+          // Komunikat o słabym haśle z walidatora zxcvbn (już po polsku z backendu)
+          setError(err.message);
         } else if (backendError.includes('invalid email')) {
           setError('Nieprawidłowy adres email');
         } else if (backendError.includes('validation') || backendError.includes('field required')) {

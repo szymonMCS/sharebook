@@ -21,19 +21,6 @@ class BookRepository(IBookRepository):
         result = await self._db.execute(select(Book).where(Book.isbn == isbn))
         return result.scalar_one_or_none()
     
-    async def get_by_isbn_for_update(self, isbn: str) -> Optional[Book]:
-        result = await self._db.execute(select(Book).where(Book.isbn == isbn).with_for_update())
-        return result.scalar_one_or_none()
-    
-    async def get_multi(self, skip: int = 0, limit: int = 100) -> List[Book]:
-        result = await self._db.execute(select(Book).offset(skip).limit(limit))
-        return list(result.scalars().all())
-    
-    async def exists(self, book_id: uuid.UUID) -> bool:
-        result = await self._db.execute(select(func.count()).where(Book.id == book_id))
-        count = result.scalar()
-        return count > 0 if count is not None else False
-    
     async def get_by_id_with_owner(self, book_id: uuid.UUID) -> Optional[tuple[Book, UserBook, User]]:
         result = await self._db.execute(
             select(Book, UserBook, User)
@@ -136,20 +123,17 @@ class BookRepository(IBookRepository):
         if filters and "status" in filters and filters["status"]:
             if filters["status"] != "all":
                 status_filter = filters["status"]
-        
         logger.info(f"[REPO] get_community_books: exclude_user_id={exclude_user_id}, status_filter={status_filter}, filters={filters}")
         
         stmt = select(Book, UserBook, User).join(UserBook, Book.id == UserBook.book_id).join(User, UserBook.user_id == User.id)
-        count_stmt = select(func.count(Book.id)).join(UserBook, Book.id == UserBook.book_id)
+        count_stmt = select(func.count(UserBook.id)).join(Book, Book.id == UserBook.book_id)
         
         if status_filter:
             stmt = stmt.where(UserBook.status == status_filter)
             count_stmt = count_stmt.where(UserBook.status == status_filter)
-        
         if exclude_user_id:
             stmt = stmt.where(UserBook.user_id != exclude_user_id)
             count_stmt = count_stmt.where(UserBook.user_id != exclude_user_id)
-        
         if filters:
             if "search" in filters and filters["search"]:
                 search = f"%{filters['search']}%"
@@ -171,16 +155,9 @@ class BookRepository(IBookRepository):
         result = await self._db.execute(select(func.count()).select_from(Book))
         return result.scalar() or 0
     
-    async def get_recent_books(self, limit: int = 10) -> List[Book]:
-        result = await self._db.execute(select(Book).order_by(Book.created_at.desc()).limit(limit))
-        return list(result.scalars().all())
-    
-    async def get_top_rated_books(self, limit: int = 10) -> List[Book]:
-        result = await self._db.execute(select(Book).where(Book.average_rating.isnot(None)).order_by(Book.average_rating.desc()).limit(limit))
-        return list(result.scalars().all())
-    
     async def list_all(self, skip: int = 0, limit: int = 100) -> List[Book]:
-        return await self.get_multi(skip, limit)
+        result = await self._db.execute(select(Book).offset(skip).limit(limit))
+        return list(result.scalars().all())
     
     async def create_book_from_dict(self, book_data: dict) -> Book:
         return await self.create(book_data)
@@ -272,32 +249,8 @@ class BookRepository(IBookRepository):
             "total_loans": total_loans.scalar() or 0,
         }
     
-    async def count_books(self) -> int:
-        return await self.count_all()
-    
     async def count_new_since(self, since: datetime) -> int:
         result = await self._db.execute(select(func.count()).select_from(Book).where(Book.created_at >= since))
         return result.scalar() or 0
     
-    async def get_multi_with_filters(
-        self,
-        skip: int = 0,
-        limit: int = 100,
-        search: Optional[str] = None,
-        author: Optional[str] = None,
-        category: Optional[str] = None
-    ) -> Tuple[List[Book], int]:
-        query = select(Book)
-        
-        if search:
-            query = query.where((Book.title.ilike(f"%{search}%")) |(Book.authors.ilike(f"%{search}%")))
-        if author:
-            query = query.where(Book.authors.ilike(f"%{author}%"))
-        if category:
-            query = query.where(Book.categories.ilike(f"%{category}%"))
-        
-        count_query = select(func.count()).select_from(query.subquery())
-        total = (await self._db.execute(count_query)).scalar() or 0
-        query = query.offset(skip).limit(limit)
-        result = await self._db.execute(query)
-        return list(result.scalars().all()), total
+

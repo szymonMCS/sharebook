@@ -79,13 +79,6 @@ class LoanRepository(BaseRepository[Loan], ILoanRepository):
         result = await self._db.execute(query)
         return list(result.scalars().all())
     
-    async def get_active_loans_for_user_book(self, user_book_id: uuid.UUID,) -> List[Loan]:
-        result = await self._db.execute(
-            select(Loan)
-            .where(and_(Loan.user_book_id == user_book_id, Loan.status == "active"))
-        )
-        return list(result.scalars().all())
-    
     async def has_active_loan(self, user_book_id: uuid.UUID,) -> bool:
         result = await self._db.execute(
             select(func.count())
@@ -101,13 +94,6 @@ class LoanRepository(BaseRepository[Loan], ILoanRepository):
         result = await self._db.execute(
             select(func.count())
             .where(and_(Loan.borrower_id == borrower_id, Loan.status == "active"))
-        )
-        return result.scalar() or 0
-    
-    async def count_active_loans_for_lender(self, lender_id: uuid.UUID,) -> int:
-        result = await self._db.execute(
-            select(func.count())
-            .where(and_(Loan.lender_id == lender_id, Loan.status == "active"))
         )
         return result.scalar() or 0
     
@@ -146,23 +132,6 @@ class LoanRepository(BaseRepository[Loan], ILoanRepository):
         await self._db.refresh(loan)
         return loan
     
-    async def mark_as_overdue(self, loan_id: uuid.UUID) -> Optional[Loan]:
-        loan = await self.get(loan_id)
-        if not loan:
-            return None
-        
-        loan.status = "overdue"
-        loan.updated_at = datetime.now(timezone.utc)
-        await self._db.commit()
-        await self._db.refresh(loan)
-        return loan
-    
-    async def get_overdue_loans(self, check_date: Optional[datetime] = None,) -> List[Loan]:
-        if check_date is None:
-            check_date = datetime.now(timezone.utc)
-        result = await self._db.execute(select(Loan).where(and_(Loan.status == "active", Loan.due_date < check_date)))
-        return list(result.scalars().all())
-
     async def count_all(self) -> int:
         result = await self._db.execute(select(func.count()).select_from(Loan))
         return result.scalar() or 0
@@ -186,28 +155,4 @@ class LoanRepository(BaseRepository[Loan], ILoanRepository):
     async def get_average_duration(self, days: int = 30) -> float:
         return 14.0
     
-    async def count_loans(self) -> int:
-        return await self.count_all()
-    
-    async def get_multi_with_filters(
-        self,
-        skip: int = 0,
-        limit: int = 100,
-        status: Optional[str] = None,
-        borrower_id: Optional[uuid.UUID] = None,
-        lender_id: Optional[uuid.UUID] = None
-    ) -> Tuple[List[Loan], int]:
-        query = select(Loan)
-        
-        if status:
-            query = query.where(Loan.status == status)
-        if borrower_id:
-            query = query.where(Loan.borrower_id == borrower_id)
-        if lender_id:
-            query = query.where(Loan.lender_id == lender_id)
-    
-        count_query = select(func.count()).select_from(query.subquery())
-        total = (await self._db.execute(count_query)).scalar() or 0
-        query = query.offset(skip).limit(limit)
-        result = await self._db.execute(query)
-        return list(result.scalars().all()), total
+

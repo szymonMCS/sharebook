@@ -84,47 +84,6 @@ class BookAdminService(IBookAdminService):
             total_pages=(total + per_page - 1) // per_page if per_page > 0 else 0
         )
     
-    async def get_book_details(self, book_id: UUID) -> dict:
-        book = await self._book_repo.get_by_id(book_id)
-        if not book:
-            raise BookNotFoundException(str(book_id))
-        
-        stats = await self._book_repo.get_book_stats(book_id)
-        user_books = await self._user_book_repo.get_owners_for_book(book_id)
-        
-        owners = []
-        for ub in user_books:
-            if ub.user:
-                owners.append({
-                    "user_book_id": str(ub.id),
-                    "user_id": str(ub.user.id),
-                    "email": ub.user.email,
-                    "first_name": ub.user.first_name,
-                    "last_name": ub.user.last_name,
-                    "status": ub.status,
-                    "condition": ub.condition,
-                    "is_lendable": ub.is_lendable,
-                    "added_at": ub.added_at.isoformat() if ub.added_at else None
-                })
-        
-        return {
-            "id": str(book.id),
-            "title": book.title,
-            "author": book.author,
-            "isbn": book.isbn,
-            "description": book.description,
-            "publisher": book.publisher,
-            "publication_year": book.publication_year,
-            "page_count": book.page_count,
-            "language": book.language,
-            "genre": book.genre,
-            "cover_url": book.cover_url,
-            "created_at": book.created_at.isoformat() if book.created_at else None,
-            "updated_at": book.updated_at.isoformat() if book.updated_at else None,
-            "stats": stats,
-            "owners": owners
-        }
-    
     async def delete_book(self, book_id: UUID, force: bool = False) -> dict:
         book = await self._book_repo.get_by_id(book_id)
         if not book:
@@ -141,38 +100,6 @@ class BookAdminService(IBookAdminService):
         
         logger.info(f"Admin deleted book {book_id}")
         return {"id": str(book_id), "deleted": True}
-    
-    async def merge_books(self, source_book_id: UUID, target_book_id: UUID) -> dict:
-        if source_book_id == target_book_id:
-            raise ValueError("Cannot merge book with itself")
-        
-        source = await self._book_repo.get_by_id(source_book_id)
-        if not source:
-            raise BookNotFoundException(str(source_book_id))
-        
-        target = await self._book_repo.get_by_id(target_book_id)
-        if not target:
-            raise BookNotFoundException(str(target_book_id))
-        
-        user_books = await self._user_book_repo.get_owners_for_book(source_book_id)
-        moved_count = 0
-        
-        for ub in user_books:
-            ub.book_id = target_book_id
-            moved_count += 1
-        
-        await self._db.commit()
-        await self._book_repo.delete(source_book_id)
-        
-        logger.info(
-            f"Admin merged book {source_book_id} into {target_book_id}. "
-            f"Moved {moved_count} copies."
-        )
-        return {
-            "source_id": str(source_book_id),
-            "target_id": str(target_book_id),
-            "moved_copies": moved_count
-        }
     
     async def update_book_metadata(self, book_id: UUID, metadata: dict) -> dict:
         book = await self._book_repo.get_by_id(book_id)

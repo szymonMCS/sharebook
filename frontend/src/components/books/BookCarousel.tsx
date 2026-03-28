@@ -114,7 +114,7 @@ export function BookCarousel({
       >
         {books.map((book, index) => (
           <div
-            key={book.id}
+            key={book.user_book_id || book.id}
             className="flex-shrink-0 w-64 snap-start"
             style={{
               animationDelay: `${index * 100}ms`,
@@ -169,7 +169,7 @@ export function BookGrid({ books, columns = 4, onBorrow, onReserve }: BookGridPr
     <div className={`grid ${gridCols[columns]} gap-6`}>
       {books.map((book, index) => (
         <div
-          key={book.id}
+          key={book.user_book_id || book.id}
           className="animate-fade-in-up"
           style={{ animationDelay: `${index * 50}ms` }}
         >

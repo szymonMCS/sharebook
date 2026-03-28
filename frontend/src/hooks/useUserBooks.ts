@@ -3,6 +3,7 @@ import type { BookCreate, UserLibraryItem } from '@/types';
 import { booksApi } from '@/api/books';
 import { loansApi } from '@/api/loans';
 import { STALE_TIME } from '@/store/queryClient';
+import { useUserBooksStore } from '@/store/userBooksStore';
 
 // Query keys
 export const userBookKeys = {
@@ -195,6 +196,7 @@ export function useCancelRequest() {
 
 export function useReturnBook() {
   const queryClient = useQueryClient();
+  const { fetchRequests } = useUserBooksStore();
 
   return useMutation({
     mutationFn: (loanId: string) => loansApi.returnBook(loanId),
@@ -216,6 +218,10 @@ export function useReturnBook() {
         queryKey: userBookKeys.lent(),
         exact: false 
       });
+      
+      // Odśwież prośby o wypożyczenie (żeby zaktualizować status zaakceptowanych próśb)
+      console.log('[useReturnBook] Refreshing loan requests...');
+      await fetchRequests();
       
       console.log('[useReturnBook] Refetch completed');
     },

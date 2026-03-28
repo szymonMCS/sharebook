@@ -79,34 +79,6 @@ class UserAdminService(IUserAdminService):
             total_pages=(total + per_page - 1) // per_page if per_page > 0 else 0
         )
     
-    async def get_user_details(self, user_id: UUID) -> dict:
-        user = await self._user_repo.get_by_id(user_id)
-        if not user:
-            raise UserNotFoundException(str(user_id))
-        
-        books_count = await self._user_book_repo.count_user_library(user_id)
-        borrowed_count = await self._loan_repo.count_active_for_borrower(user_id)
-        lent_count = await self._user_book_repo.count_lent_by_user(user_id)
-        
-        return {
-            "id": str(user.id),
-            "email": user.email,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "role": user.role,
-            "is_active": user.is_active,
-            "is_superuser": user.is_superuser,
-            "location": user.location,
-            "phone": user.phone,
-            "created_at": user.created_at.isoformat() if user.created_at else None,
-            "updated_at": user.updated_at.isoformat() if user.updated_at else None,
-            "stats": {
-                "books_count": books_count,
-                "borrowed_count": borrowed_count,
-                "lent_count": lent_count
-            }
-        }
-    
     async def update_user_role(self, user_id: UUID, new_role: str, current_admin_id: UUID) -> dict:
         if user_id == current_admin_id:
             raise SelfModificationException("role")
@@ -145,39 +117,6 @@ class UserAdminService(IUserAdminService):
         return {
             "message": "Hasło zresetowane",
             "temp_password": temp_password 
-        }
-    
-    async def deactivate_user(self, user_id: UUID, current_admin_id: UUID) -> dict:
-        if user_id == current_admin_id:
-            raise SelfModificationException("deactivate")
-        
-        user = await self._user_repo.get_by_id(user_id)
-        if not user:
-            raise UserNotFoundException(str(user_id))
-        
-        await self._user_repo.update(user, {"is_active": False})
-        
-        logger.info(f"Admin {current_admin_id} deactivated user {user_id}")
-        
-        return {
-            "id": str(user.id),
-            "email": user.email,
-            "is_active": False
-        }
-    
-    async def activate_user(self, user_id: UUID, current_admin_id: UUID) -> dict:
-        user = await self._user_repo.get_by_id(user_id)
-        if not user:
-            raise UserNotFoundException(str(user_id))
-        
-        await self._user_repo.update(user, {"is_active": True})
-        
-        logger.info(f"Admin {current_admin_id} activated user {user_id}")
-        
-        return {
-            "id": str(user.id),
-            "email": user.email,
-            "is_active": True
         }
     
     async def delete_user(self, user_id: UUID, current_admin_id: UUID, hard_delete: bool = False) -> None:
